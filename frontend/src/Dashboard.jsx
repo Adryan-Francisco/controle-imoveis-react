@@ -136,7 +136,8 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
         <AppShell.Header height={60} p="xs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[2]}` }}>
           <Group><Title order={3}>Controlo de Imóveis Rurais</Title></Group>
           <Group>
-            <Text size="sm" c="dimmed">Olá, {user.email}</Text>
+            {/* --- CORREÇÃO APLICADA AQUI --- */}
+            <Text size="sm" color="dimmed">Olá, {user.email}</Text>
             <ActionIcon onClick={toggleColorScheme} size="lg" variant="default" radius="md">
               {colorScheme === 'dark' ? <IconSun size="1.2rem" /> : <IconMoonStars size="1.2rem" />}
             </ActionIcon>
