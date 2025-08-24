@@ -67,7 +67,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
     setIsSubmitting(true);
     const dataToSend = { ...values };
     
-    if (dataToSend.valor === '') dataToSend.valor = null;
+    if (dataToSend.valor === '' || dataToSend.valor === undefined) dataToSend.valor = null;
     if (dataToSend.data_vencimento === '') dataToSend.data_vencimento = null;
     if (dataToSend.data_pagamento === '') dataToSend.data_pagamento = null;
     
