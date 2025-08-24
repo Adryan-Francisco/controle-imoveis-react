@@ -1,40 +1,28 @@
-// src/App.jsx
+// src/Dashboard.jsx
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import { useAuth } from './AuthProvider';
 
 // --- Importações do Mantine e de Ícones ---
 import {
-  MantineProvider, AppShell, Title, Paper, TextInput, Select, NumberInput, Button,
+  AppShell, Container, Title, Paper, TextInput, Select, NumberInput, Button,
   Table, Group, ActionIcon, Loader, Center, Text, Modal, Badge,
-  useMantineTheme, SimpleGrid, Container
+  useMantineTheme, SimpleGrid
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
-import { Notifications, notifications } from '@mantine/notifications';
+import { notifications } from '@mantine/notifications';
 import { 
-  IconPencil, IconTrash, IconPlus, IconSearch, IconSun, IconMoonStars, IconHome
+  IconPencil, IconTrash, IconPlus, IconSearch, IconSun, IconMoonStars, IconLogout
 } from '@tabler/icons-react';
 import 'dayjs/locale/pt-br';
 
-// --- COMPONENTE PRINCIPAL QUE GERENCIA O TEMA ---
-export default function App() {
-  const [colorScheme, setColorScheme] = useState('light');
-  const toggleColorScheme = (value) =>
-    setColorScheme(value || (colorScheme === 'dark' ? 'light' : 'dark'));
-
-  return (
-    <MantineProvider theme={{ colorScheme, primaryColor: 'indigo' }} withGlobalStyles withNormalizeCSS>
-      <Notifications position="top-right" />
-      <AppContent toggleColorScheme={toggleColorScheme} colorScheme={colorScheme} />
-    </MantineProvider>
-  );
-}
-
-// --- COMPONENTE COM A LÓGICA DA APLICAÇÃO ---
-function AppContent({ toggleColorScheme, colorScheme }) {
+export default function Dashboard({ toggleColorScheme, colorScheme }) {
   const theme = useMantineTheme();
+  const { user, signOut } = useAuth();
+
   const [imoveis, setImoveis] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +33,7 @@ function AppContent({ toggleColorScheme, colorScheme }) {
   const [selectedImovel, setSelectedImovel] = useState(null);
 
   const form = useForm({
+    // --- CORREÇÃO APLICADA AQUI ---
     initialValues: {
       id: null, proprietario: '', sitio: '', cpf: '', valor: null, data_vencimento: null,
       status_pagamento: 'PENDENTE', ccir: '', endereco: '', itr: '', telefone: '', data_pagamento: null
@@ -55,47 +44,60 @@ function AppContent({ toggleColorScheme, colorScheme }) {
   });
 
   async function fetchImoveis() {
+    if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase.from('ControleImoveisRurais').select('*').order('id', { ascending: true });
+    const { data, error } = await supabase
+      .from('ControleImoveisRurais')
+      .select('*')
+      .eq('user_id', user.id) // Filtra pelo ID do usuário
+      .order('id', { ascending: true });
+    
     if (error) {
-      notifications.show({ title: 'Erro de Conexão', message: 'Não foi possível buscar os dados.', color: 'red' });
+      notifications.show({ title: 'Erro', message: 'Não foi possível buscar seus dados.', color: 'red' });
     } else {
       setImoveis(data);
     }
     setLoading(false);
   }
 
-  useEffect(() => { fetchImoveis(); }, []);
+  useEffect(() => {
+    fetchImoveis();
+  }, [user]);
 
   async function handleSubmit(values) {
     setIsSubmitting(true);
     const dataToSend = { ...values };
-
+    
+    if (dataToSend.valor === '') dataToSend.valor = null;
+    if (dataToSend.data_vencimento === '') dataToSend.data_vencimento = null;
+    if (dataToSend.data_pagamento === '') dataToSend.data_pagamento = null;
+    
     const isEditing = !!form.values.id;
-    const { id, ...data } = dataToSend;
-    const operation = isEditing
-      ? supabase.from('ControleImoveisRurais').update(data).eq('id', id)
-      : supabase.from('ControleImoveisRurais').insert([data]);
-
-    const { error } = await operation;
-
-    if (error) {
-      notifications.show({ title: 'Erro!', message: `Falha ao ${isEditing ? 'atualizar' : 'criar'} o registro.`, color: 'red' });
+    
+    if (isEditing) {
+      const { id, user_id, ...dataToUpdate } = dataToSend;
+      const { error } = await supabase.from('ControleImoveisRurais').update(dataToUpdate).eq('id', id);
+      if (error) notifications.show({ title: 'Erro!', message: 'Falha ao atualizar o registro.', color: 'red' });
+      else notifications.show({ title: 'Sucesso!', message: 'Registro atualizado com sucesso.', color: 'green' });
     } else {
-      notifications.show({ title: 'Sucesso!', message: `Registro ${isEditing ? 'atualizado' : 'criado'} com sucesso.`, color: 'green' });
-      fetchImoveis();
-      closeModal();
+      const { id, ...dataToInsert } = dataToSend;
+      const { error } = await supabase
+        .from('ControleImoveisRurais')
+        .insert([{ ...dataToInsert, user_id: user.id }]);
+      if (error) notifications.show({ title: 'Erro!', message: 'Falha ao criar o registro.', color: 'red' });
+      else notifications.show({ title: 'Sucesso!', message: 'Registro criado com sucesso.', color: 'green' });
     }
+    fetchImoveis();
+    closeModal();
     setIsSubmitting(false);
   }
 
   async function handleDelete() {
     setIsSubmitting(true);
     const { error } = await supabase.from('ControleImoveisRurais').delete().eq('id', selectedImovel.id);
-    if (error) {
-      notifications.show({ title: 'Erro!', message: 'Falha ao deletar.', color: 'red' });
-    } else {
-      notifications.show({ title: 'Sucesso!', message: 'Registro deletado.', color: 'teal' });
+    if (error) notifications.show({ title: 'Erro!', message: 'Falha ao deletar o registro.', color: 'red' });
+    else {
+      notifications.show({ title: 'Sucesso!', message: 'Registro deletado com sucesso.', color: 'teal' });
       fetchImoveis();
     }
     closeDeleteModal();
@@ -127,9 +129,15 @@ function AppContent({ toggleColorScheme, colorScheme }) {
       header={
         <AppShell.Header height={60} p="xs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[2]}` }}>
           <Group><Title order={3}>Controle de Imóveis Rurais</Title></Group>
-          <ActionIcon onClick={() => toggleColorScheme()} size="lg" variant="default" radius="md">
-            {colorScheme === 'dark' ? <IconSun size="1.2rem" /> : <IconMoonStars size="1.2rem" />}
-          </ActionIcon>
+          <Group>
+            <Text size="sm" c="dimmed">Olá, {user.email}</Text>
+            <ActionIcon onClick={toggleColorScheme} size="lg" variant="default" radius="md">
+              {colorScheme === 'dark' ? <IconSun size="1.2rem" /> : <IconMoonStars size="1.2rem" />}
+            </ActionIcon>
+            <Button onClick={signOut} variant="light" color="red" leftSection={<IconLogout size={16} />}>
+              Sair
+            </Button>
+          </Group>
         </AppShell.Header>
       }
       styles={(theme) => ({ main: { backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0] } })}
@@ -148,16 +156,11 @@ function AppContent({ toggleColorScheme, colorScheme }) {
             </SimpleGrid>
             <SimpleGrid mt="md" cols={3} breakpoints={[{ maxWidth: 'sm', cols: 1 }]}>
                 <TextInput label="CCIR" placeholder="Código do CCIR" {...form.getInputProps('ccir')} />
-                <TextInput label="ITR/CIB" placeholder="Número do ITR/CIB" {...form.getInputProps('itr')} />
-                {/* --- CORREÇÃO DO NUMBERINPUT APLICADA AQUI --- */}
+                <TextInput label="ITR" placeholder="Número do ITR" {...form.getInputProps('itr')} />
                 <NumberInput
-                  label="Valor (R$)"
-                  placeholder="1500.00"
-                  precision={2}
-                  step={50}
-                  min={0}
-                  value={form.values.valor === null ? '' : form.values.valor}
-                  onChange={(value) => form.setFieldValue('valor', value === '' ? null : value)}
+                  label="Valor (R$)" placeholder="1500.00" precision={2} step={50} min={0}
+                  value={form.values.valor ?? ''}
+                  onChange={(value) => form.setFieldValue('valor', value === '' ? null : Number(value))}
                   error={form.errors.valor}
                 />
             </SimpleGrid>
@@ -195,35 +198,23 @@ function AppContent({ toggleColorScheme, colorScheme }) {
             </Button>
           </Group>
           <div style={{ overflowX: 'auto' }}>
-            {/* --- CORREÇÃO DA TABLE APLICADA AQUI --- */}
             <Table striped highlightOnHover fontSize="sm" verticalSpacing="sm">
               <thead>
                 <tr>
-                  <th>Proprietário</th>
-                  <th>Sítio</th>
-                  <th>Telefone</th>
-                  <th>Status</th>
-                  <th>Vencimento</th>
-                  <th>Valor</th>
-                  <th>Ações</th>
+                  <th>Proprietário</th><th>Sítio</th><th>Telefone</th><th>Status</th>
+                  <th>Vencimento</th><th>Valor</th><th>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr><td colSpan={7}><Center my="xl"><Loader /></Center></td></tr>
                 ) : filteredData.length === 0 ? (
-                  <tr><td colSpan={7}><Center my="xl"><Text>Nenhum registro encontrado.</Text></Center></td></tr>
+                  <tr><td colSpan={7}><Center my="xl"><Text>Nenhum registro para este usuário.</Text></Center></td></tr>
                 ) : 
                 (filteredData.map((prop) => (
                   <tr key={prop.id}>
-                    <td>{prop.proprietario}</td>
-                    <td>{prop.sitio}</td>
-                    <td>{prop.telefone}</td>
-                    <td>
-                      <Badge color={statusColors[prop.status_pagamento] || 'gray'} variant={theme.colorScheme === 'dark' ? 'light' : 'filled'}>
-                        {prop.status_pagamento}
-                      </Badge>
-                    </td>
+                    <td>{prop.proprietario}</td><td>{prop.sitio}</td><td>{prop.telefone}</td>
+                    <td><Badge color={statusColors[prop.status_pagamento] || 'gray'} variant={theme.colorScheme === 'dark' ? 'light' : 'filled'}>{prop.status_pagamento}</Badge></td>
                     <td>{prop.data_vencimento ? new Date(prop.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'N/A'}</td>
                     <td>{prop.valor ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prop.valor) : 'N/A'}</td>
                     <td>
