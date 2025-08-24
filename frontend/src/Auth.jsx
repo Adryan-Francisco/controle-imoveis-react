@@ -26,18 +26,21 @@ export default function Auth() {
     setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) setError(error.message);
-    else alert('Cadastro realizado! Verifique seu e-mail para confirmação (se habilitado).');
+    else alert('Cadastro realizado! Agora você pode fazer o login.');
     setLoading(false);
   };
 
   return (
     <Container size={420} my={40}>
       <Title align="center">Bem-vindo!</Title>
+      <Text c="dimmed" size="sm" align="center" mt={5}>
+        Faça login ou crie uma conta para continuar.
+      </Text>
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
         <form>
           <TextInput label="Email" placeholder="seu@email.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <PasswordInput label="Senha" placeholder="Sua senha" required mt="md" value={password} onChange={(e) => setPassword(e.target.value)} />
-
+          
           {error && <Alert icon={<IconAlertCircle size="1rem" />} title="Erro!" color="red" mt="lg">{error}</Alert>}
 
           <Group position="apart" mt="lg">

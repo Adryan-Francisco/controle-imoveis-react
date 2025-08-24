@@ -33,7 +33,6 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
   const [selectedImovel, setSelectedImovel] = useState(null);
 
   const form = useForm({
-    // --- CORREÇÃO APLICADA AQUI ---
     initialValues: {
       id: null, proprietario: '', sitio: '', cpf: '', valor: null, data_vencimento: null,
       status_pagamento: 'PENDENTE', ccir: '', endereco: '', itr: '', telefone: '', data_pagamento: null
@@ -53,7 +52,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
       .order('id', { ascending: true });
     
     if (error) {
-      notifications.show({ title: 'Erro', message: 'Não foi possível buscar seus dados.', color: 'red' });
+      notifications.show({ title: 'Erro', message: 'Não foi possível buscar os seus dados.', color: 'red' });
     } else {
       setImoveis(data);
     }
@@ -77,15 +76,21 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
     if (isEditing) {
       const { id, user_id, ...dataToUpdate } = dataToSend;
       const { error } = await supabase.from('ControleImoveisRurais').update(dataToUpdate).eq('id', id);
-      if (error) notifications.show({ title: 'Erro!', message: 'Falha ao atualizar o registro.', color: 'red' });
-      else notifications.show({ title: 'Sucesso!', message: 'Registro atualizado com sucesso.', color: 'green' });
+      if (error) {
+        notifications.show({ title: 'Erro!', message: 'Falha ao atualizar o registo.', color: 'red' });
+      } else {
+        notifications.show({ title: 'Sucesso!', message: 'Registo atualizado com sucesso.', color: 'green' });
+      }
     } else {
       const { id, ...dataToInsert } = dataToSend;
       const { error } = await supabase
         .from('ControleImoveisRurais')
         .insert([{ ...dataToInsert, user_id: user.id }]);
-      if (error) notifications.show({ title: 'Erro!', message: 'Falha ao criar o registro.', color: 'red' });
-      else notifications.show({ title: 'Sucesso!', message: 'Registro criado com sucesso.', color: 'green' });
+      if (error) {
+        notifications.show({ title: 'Erro!', message: 'Falha ao criar o registo.', color: 'red' });
+      } else {
+        notifications.show({ title: 'Sucesso!', message: 'Registo criado com sucesso.', color: 'green' });
+      }
     }
     fetchImoveis();
     closeModal();
@@ -95,9 +100,10 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
   async function handleDelete() {
     setIsSubmitting(true);
     const { error } = await supabase.from('ControleImoveisRurais').delete().eq('id', selectedImovel.id);
-    if (error) notifications.show({ title: 'Erro!', message: 'Falha ao deletar o registro.', color: 'red' });
-    else {
-      notifications.show({ title: 'Sucesso!', message: 'Registro deletado com sucesso.', color: 'teal' });
+    if (error) {
+      notifications.show({ title: 'Erro!', message: 'Falha ao apagar o registo.', color: 'red' });
+    } else {
+      notifications.show({ title: 'Sucesso!', message: 'Registo apagado com sucesso.', color: 'teal' });
       fetchImoveis();
     }
     closeDeleteModal();
@@ -128,7 +134,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
       padding="md"
       header={
         <AppShell.Header height={60} p="xs" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[2]}` }}>
-          <Group><Title order={3}>Controle de Imóveis Rurais</Title></Group>
+          <Group><Title order={3}>Controlo de Imóveis Rurais</Title></Group>
           <Group>
             <Text size="sm" c="dimmed">Olá, {user.email}</Text>
             <ActionIcon onClick={toggleColorScheme} size="lg" variant="default" radius="md">
@@ -156,9 +162,9 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
             </SimpleGrid>
             <SimpleGrid mt="md" cols={3} breakpoints={[{ maxWidth: 'sm', cols: 1 }]}>
                 <TextInput label="CCIR" placeholder="Código do CCIR" {...form.getInputProps('ccir')} />
-                <TextInput label="ITR" placeholder="Número do ITR" {...form.getInputProps('itr')} />
+                <TextInput label="ITR/CIB" placeholder="Número do ITR/CIB" {...form.getInputProps('itr')} />
                 <NumberInput
-                  label="Valor (R$)" placeholder="1500.00" precision={2} step={50} min={0}
+                  label="Valor (R$)" placeholder="Digite o Valor" precision={2} step={50} min={0}
                   value={form.values.valor ?? ''}
                   onChange={(value) => form.setFieldValue('valor', value === '' ? null : Number(value))}
                   error={form.errors.valor}
@@ -177,7 +183,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
         </Modal>
 
         <Modal opened={deleteModalOpened} onClose={closeDeleteModal} title="Confirmar Exclusão" centered>
-          <Text>Tem certeza que deseja excluir o registro de <strong>{selectedImovel?.proprietario}</strong>?</Text>
+          <Text>Tem a certeza que deseja excluir o registo de <strong>{selectedImovel?.proprietario}</strong>?</Text>
           <Group position="right" mt="xl">
             <Button variant="default" onClick={closeDeleteModal}>Cancelar</Button>
             <Button color="red" onClick={handleDelete} loading={isSubmitting}>Excluir</Button>
@@ -187,7 +193,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
         <Paper withBorder shadow="md" p="lg" radius="md">
           <Group position="apart" mb="lg">
             <TextInput
-              placeholder="Buscar por proprietário ou sítio..."
+              placeholder="Procurar por proprietário ou sítio..."
               icon={<IconSearch size={14} />}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.currentTarget.value)}
@@ -209,7 +215,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
                 {loading ? (
                   <tr><td colSpan={7}><Center my="xl"><Loader /></Center></td></tr>
                 ) : filteredData.length === 0 ? (
-                  <tr><td colSpan={7}><Center my="xl"><Text>Nenhum registro para este usuário.</Text></Center></td></tr>
+                  <tr><td colSpan={7}><Center my="xl"><Text>Nenhum registo para este utilizador.</Text></Center></td></tr>
                 ) : 
                 (filteredData.map((prop) => (
                   <tr key={prop.id}>

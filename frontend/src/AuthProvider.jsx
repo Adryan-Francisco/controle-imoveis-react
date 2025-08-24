@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
     user: session?.user,
     signOut: () => supabase.auth.signOut(),
   };
-
+  
   // Não renderiza nada até que a verificação inicial da sessão esteja completa
   if (loading) {
     return null; 
