@@ -156,7 +156,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
             </SimpleGrid>
             <SimpleGrid mt="md" cols={3} breakpoints={[{ maxWidth: 'sm', cols: 1 }]}>
                 <TextInput label="CCIR" placeholder="Código do CCIR" {...form.getInputProps('ccir')} />
-                <TextInput label="ITR" placeholder="Número do ITR" {...form.getInputProps('itr')} />
+                <TextInput label="ITR/CIB" placeholder="Número do ITR/CIB" {...form.getInputProps('itr')} />
                 <NumberInput
                   label="Valor (R$)" placeholder="1500.00" precision={2} step={50} min={0}
                   value={form.values.valor ?? ''}

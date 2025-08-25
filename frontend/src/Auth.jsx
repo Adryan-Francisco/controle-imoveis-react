@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { supabase } from './supabaseClient';
-import { Container, Title, Paper, TextInput, PasswordInput, Button, Group, Alert } from '@mantine/core';
+import { Container, Title, Paper, TextInput, PasswordInput, Button, Group, Alert, Text } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { IconAlertCircle } from '@tabler/icons-react';
 
 export default function Auth() {
@@ -16,7 +17,9 @@ export default function Auth() {
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+    }
     setLoading(false);
   };
 
@@ -25,8 +28,15 @@ export default function Auth() {
     setError(null);
     setLoading(true);
     const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setError(error.message);
-    else alert('Cadastro realizado! Agora você pode fazer o login.');
+    if (error) {
+      setError(error.message);
+    } else {
+      notifications.show({
+        title: 'Cadastro realizado!',
+        message: 'Agora você já pode fazer o login com as suas credenciais.',
+        color: 'green',
+      });
+    }
     setLoading(false);
   };
 
