@@ -4,10 +4,16 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './AuthProvider';
 import { MantineProvider, createTheme } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import ErrorBoundary from './components/ErrorBoundary';
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
+import { usePWA } from './hooks/usePWA';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
+import { OfflineIndicator } from './components/OfflineIndicator';
 import Auth from './Auth';
 import Dashboard from './Dashboard';
 
-// Tema personalizado mais moderno
+// Tema personalizado mais moderno com melhor acessibilidade
 const theme = createTheme({
   primaryColor: 'blue',
   primaryShade: { light: 6, dark: 4 },
@@ -47,6 +53,10 @@ const theme = createTheme({
       styles: {
         root: {
           fontWeight: 500,
+          '&:focus': {
+            outline: '2px solid #0ea5e9',
+            outlineOffset: '2px',
+          },
         },
       },
     },
@@ -62,27 +72,84 @@ const theme = createTheme({
         shadow: 'sm',
       },
     },
+    TextInput: {
+      styles: {
+        input: {
+          '&:focus': {
+            outline: '2px solid #0ea5e9',
+            outlineOffset: '2px',
+          },
+        },
+      },
+    },
+    Select: {
+      styles: {
+        input: {
+          '&:focus': {
+            outline: '2px solid #0ea5e9',
+            outlineOffset: '2px',
+          },
+        },
+      },
+    },
+    NumberInput: {
+      styles: {
+        input: {
+          '&:focus': {
+            outline: '2px solid #0ea5e9',
+            outlineOffset: '2px',
+          },
+        },
+      },
+    },
+    DatePickerInput: {
+      styles: {
+        input: {
+          '&:focus': {
+            outline: '2px solid #0ea5e9',
+            outlineOffset: '2px',
+          },
+        },
+      },
+    },
   },
 });
 
-function AppContent() {
+function AppContent({ colorScheme, toggleColorScheme }) {
   const { session } = useAuth();
-  const [colorScheme, setColorScheme] = useState('light');
-  const toggleColorScheme = () => setColorScheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  
+  // Enable keyboard navigation
+  useKeyboardNavigation();
+  
+  // PWA functionality
+  const { isOnline, canInstall, needRefresh, installApp, updateApp, dismissUpdate } = usePWA();
 
   return (
-    <MantineProvider theme={theme} defaultColorScheme={colorScheme} withGlobalStyles withNormalizeCSS>
+    <>
       <Notifications position="top-right" />
+      
+      {/* PWA Components */}
+      <OfflineIndicator isOnline={isOnline} />
+      {needRefresh && <PWAUpdatePrompt onUpdate={updateApp} onDismiss={dismissUpdate} />}
+      {canInstall && <PWAInstallPrompt onInstall={installApp} onDismiss={() => {}} />}
+      
       {/* Esta é a linha mais importante: ela decide qual página mostrar */}
       {!session ? <Auth /> : <Dashboard toggleColorScheme={toggleColorScheme} colorScheme={colorScheme} />}
-    </MantineProvider>
+    </>
   );
 }
 
 export default function App() {
+  const [colorScheme, setColorScheme] = useState('light');
+  const toggleColorScheme = () => setColorScheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <MantineProvider theme={theme} defaultColorScheme={colorScheme} withGlobalStyles withNormalizeCSS>
+      <ErrorBoundary>
+        <AuthProvider>
+          <AppContent colorScheme={colorScheme} toggleColorScheme={toggleColorScheme} />
+        </AuthProvider>
+      </ErrorBoundary>
+    </MantineProvider>
   );
 }
