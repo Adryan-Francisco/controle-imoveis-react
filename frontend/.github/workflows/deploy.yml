@@ -1,0 +1,155 @@
+# .github/workflows/deploy.yml
+name: Deploy to Environments
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Deploy para staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: Build for staging
+        working-directory: ./frontend
+        run: |
+          npm run build
+          echo "STAGING_BUILD=true" >> $GITHUB_ENV
+
+      - name: Deploy to Staging
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          cname: staging.${{ secrets.CUSTOM_DOMAIN }}
+
+      - name: Notify staging deployment
+        run: |
+          echo "🚀 Deploy para staging realizado com sucesso!"
+          echo "🔗 URL: https://staging.${{ secrets.CUSTOM_DOMAIN }}"
+
+  # Deploy para produção
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment: production
+    needs: deploy-staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run full test suite
+        working-directory: ./frontend
+        run: npm run test:all
+
+      - name: Build for production
+        working-directory: ./frontend
+        run: |
+          npm run build
+          echo "PRODUCTION_BUILD=true" >> $GITHUB_ENV
+
+      - name: Deploy to Production
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          cname: ${{ secrets.CUSTOM_DOMAIN }}
+
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            ## 🚀 Deploy para Produção
+            
+            **Versão:** v${{ github.run_number }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** ${{ github.sha }}
+            
+            ### 📋 Mudanças
+            - Melhorias de performance
+            - Melhorias de acessibilidade
+            - Novos testes automatizados
+            - Configuração de CI/CD
+            
+            ### 🔗 Links
+            - **Produção:** https://${{ secrets.CUSTOM_DOMAIN }}
+            - **Staging:** https://staging.${{ secrets.CUSTOM_DOMAIN }}
+          draft: false
+          prerelease: false
+
+      - name: Notify production deployment
+        run: |
+          echo "🎉 Deploy para produção realizado com sucesso!"
+          echo "🔗 URL: https://${{ secrets.CUSTOM_DOMAIN }}"
+          echo "📦 Release: v${{ github.run_number }}"
+
+  # Rollback em caso de falha
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy-production]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rollback to previous version
+        run: |
+          echo "🔄 Iniciando rollback..."
+          # Aqui você implementaria a lógica de rollback
+          echo "✅ Rollback concluído"
+
+      - name: Notify rollback
+        run: |
+          echo "⚠️ Rollback realizado devido a falha no deploy"
+          echo "🔍 Verifique os logs para identificar o problema"

@@ -1,292 +1,264 @@
 // src/components/AdvancedFilters.jsx
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Paper,
   Group,
   TextInput,
   Select,
-  NumberInput,
   Button,
-  ActionIcon,
   Collapse,
   Stack,
   Text,
   Badge,
-  useMantineTheme,
+  ActionIcon,
   Grid,
-  Flex
+  NumberInput,
+  useMantineTheme,
+  Divider,
+  Box
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
-import { 
-  IconSearch, 
-  IconFilter, 
-  IconX, 
-  IconChevronDown, 
+import {
+  IconSearch,
+  IconFilter,
+  IconX,
+  IconChevronDown,
   IconChevronUp,
   IconCalendar,
   IconCurrencyReal,
-  IconUser,
-  IconMapPin
+  IconRefresh
 } from '@tabler/icons-react';
 
-export function AdvancedFilters({ 
-  imoveis, 
-  onFilter, 
-  isMobile = false 
+export function AdvancedFilters({
+  filters = {},
+  onFilterChange,
+  onClearFilters,
+  activeFiltersCount = 0,
+  isCollapsed = false,
+  onToggleCollapse
 }) {
   const theme = useMantineTheme();
-  const [opened, { toggle }] = useDisclosure(false);
-  
-  const [filters, setFilters] = useState({
+  const [opened, { toggle }] = useDisclosure(!isCollapsed);
+
+  // Garantir que filters tenha valores padrão
+  const safeFilters = {
     search: '',
     status: '',
-    minValue: '',
-    maxValue: '',
-    startDate: null,
-    endDate: null,
-    proprietario: '',
-    localizacao: ''
-  });
+    dateFrom: null,
+    dateTo: null,
+    valorMin: null,
+    valorMax: null,
+    ...filters
+  };
 
-  // Opções para o select de status
   const statusOptions = [
     { value: '', label: 'Todos os status' },
-    { value: 'pago', label: 'Pago' },
-    { value: 'pendente', label: 'Pendente' },
-    { value: 'atrasado', label: 'Atrasado' }
+    { value: 'PAGO', label: 'Pago' },
+    { value: 'PENDENTE', label: 'Pendente' },
+    { value: 'ATRASADO', label: 'Atrasado' }
   ];
 
-  // Aplicar filtros
-  const filteredImoveis = useMemo(() => {
-    return imoveis.filter(imovel => {
-      // Filtro de busca geral
-      if (filters.search) {
-        const searchLower = filters.search.toLowerCase();
-        const matchesSearch = 
-          imovel.proprietario?.toLowerCase().includes(searchLower) ||
-          imovel.cpf?.includes(searchLower) ||
-          imovel.localizacao?.toLowerCase().includes(searchLower) ||
-          imovel.telefone?.includes(searchLower);
-        
-        if (!matchesSearch) return false;
-      }
-
-      // Filtro de status
-      if (filters.status && imovel.status !== filters.status) {
-        return false;
-      }
-
-      // Filtro de valor mínimo
-      if (filters.minValue && imovel.valor < parseFloat(filters.minValue)) {
-        return false;
-      }
-
-      // Filtro de valor máximo
-      if (filters.maxValue && imovel.valor > parseFloat(filters.maxValue)) {
-        return false;
-      }
-
-      // Filtro de data início
-      if (filters.startDate && imovel.dataVencimento < filters.startDate) {
-        return false;
-      }
-
-      // Filtro de data fim
-      if (filters.endDate && imovel.dataVencimento > filters.endDate) {
-        return false;
-      }
-
-      // Filtro de proprietário
-      if (filters.proprietario) {
-        const proprietarioLower = filters.proprietario.toLowerCase();
-        if (!imovel.proprietario?.toLowerCase().includes(proprietarioLower)) {
-          return false;
-        }
-      }
-
-      // Filtro de localização
-      if (filters.localizacao) {
-        const localizacaoLower = filters.localizacao.toLowerCase();
-        if (!imovel.localizacao?.toLowerCase().includes(localizacaoLower)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [imoveis, filters]);
-
-  // Contar filtros ativos
-  const activeFiltersCount = Object.values(filters).filter(value => 
-    value !== '' && value !== null
-  ).length;
-
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    onFilter(filteredImoveis);
+    onFilterChange(key, value);
   };
 
-  const clearFilters = () => {
-    const clearedFilters = {
-      search: '',
-      status: '',
-      minValue: '',
-      maxValue: '',
-      startDate: null,
-      endDate: null,
-      proprietario: '',
-      localizacao: ''
-    };
-    setFilters(clearedFilters);
-    onFilter(imoveis);
+  const handleClearFilter = (key) => {
+    onFilterChange(key, key === 'search' ? '' : null);
   };
 
-  const applyFilters = () => {
-    onFilter(filteredImoveis);
+  const handleClearAll = () => {
+    onClearFilters();
   };
 
   return (
-    <Paper shadow="sm" p="md" radius="md" mb="md">
-      {/* Barra de busca principal */}
-      <Group mb="md">
-        <TextInput
-          placeholder="Buscar por proprietário, CPF, localização..."
-          leftSection={<IconSearch size={16} />}
-          value={filters.search}
-          onChange={(e) => handleFilterChange('search', e.target.value)}
-          style={{ flex: 1 }}
-          size={isMobile ? 'sm' : 'md'}
-        />
-        
-        <Button
-          leftSection={<IconFilter size={16} />}
-          rightSection={opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
-          onClick={toggle}
-          variant="light"
-          size={isMobile ? 'sm' : 'md'}
-        >
-          Filtros
-          {activeFiltersCount > 0 && (
-            <Badge size="xs" color="blue" ml="xs">
-              {activeFiltersCount}
-            </Badge>
-          )}
-        </Button>
+    <Paper shadow="sm" p="md" radius="md">
+      {/* Header com busca rápida */}
+      <Group justify="space-between" mb="md">
+        <Group gap="sm" style={{ flex: 1 }}>
+          <TextInput
+            placeholder="Buscar por proprietário, sítio, endereço..."
+            value={safeFilters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            leftSection={<IconSearch size={16} />}
+            rightSection={
+              safeFilters.search && (
+                <ActionIcon
+                  size="sm"
+                  variant="transparent"
+                  onClick={() => handleClearFilter('search')}
+                >
+                  <IconX size={14} />
+                </ActionIcon>
+              )
+            }
+            style={{ flex: 1, maxWidth: 400 }}
+          />
+          
+          <Button
+            variant="light"
+            leftSection={<IconFilter size={16} />}
+            rightSection={
+              opened ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />
+            }
+            onClick={toggle}
+          >
+            Filtros
+            {activeFiltersCount > 0 && (
+              <Badge size="sm" color="blue" ml="xs">
+                {activeFiltersCount}
+              </Badge>
+            )}
+          </Button>
+        </Group>
+
+        {activeFiltersCount > 0 && (
+          <Button
+            variant="subtle"
+            color="red"
+            leftSection={<IconRefresh size={16} />}
+            onClick={handleClearAll}
+            size="sm"
+          >
+            Limpar filtros
+          </Button>
+        )}
       </Group>
 
       {/* Filtros avançados */}
       <Collapse in={opened}>
-        <Stack gap="md">
-          <Grid>
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <Select
-                label="Status"
-                placeholder="Selecione o status"
-                data={statusOptions}
-                value={filters.status}
-                onChange={(value) => handleFilterChange('status', value)}
-                leftSection={<IconUser size={16} />}
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <TextInput
-                label="Proprietário"
-                placeholder="Nome do proprietário"
-                value={filters.proprietario}
-                onChange={(e) => handleFilterChange('proprietario', e.target.value)}
-                leftSection={<IconUser size={16} />}
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <NumberInput
-                label="Valor Mínimo"
-                placeholder="R$ 0,00"
-                value={filters.minValue}
-                onChange={(value) => handleFilterChange('minValue', value)}
-                leftSection={<IconCurrencyReal size={16} />}
-                decimalScale={2}
-                fixedDecimalScale
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <NumberInput
-                label="Valor Máximo"
-                placeholder="R$ 0,00"
-                value={filters.maxValue}
-                onChange={(value) => handleFilterChange('maxValue', value)}
-                leftSection={<IconCurrencyReal size={16} />}
-                decimalScale={2}
-                fixedDecimalScale
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <DatePickerInput
-                label="Data Início"
-                placeholder="Selecione a data"
-                value={filters.startDate}
-                onChange={(value) => handleFilterChange('startDate', value)}
-                leftSection={<IconCalendar size={16} />}
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={isMobile ? 12 : 6}>
-              <DatePickerInput
-                label="Data Fim"
-                placeholder="Selecione a data"
-                value={filters.endDate}
-                onChange={(value) => handleFilterChange('endDate', value)}
-                leftSection={<IconCalendar size={16} />}
-              />
-            </Grid.Col>
-            
-            <Grid.Col span={12}>
-              <TextInput
-                label="Localização"
-                placeholder="Cidade, estado, região..."
-                value={filters.localizacao}
-                onChange={(e) => handleFilterChange('localizacao', e.target.value)}
-                leftSection={<IconMapPin size={16} />}
-              />
-            </Grid.Col>
-          </Grid>
+        <Divider mb="md" />
+        
+        <Grid gutter="md">
+          {/* Status */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <Select
+              label="Status do Pagamento"
+              placeholder="Selecione o status"
+              data={statusOptions}
+              value={safeFilters.status}
+              onChange={(value) => handleFilterChange('status', value)}
+              leftSection={<IconFilter size={16} />}
+            />
+          </Grid.Col>
 
-          {/* Botões de ação */}
-          <Group justify="space-between">
-            <Text size="sm" c="dimmed">
-              {filteredImoveis.length} de {imoveis.length} imóveis encontrados
+          {/* Data de vencimento - De */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <DatePickerInput
+              label="Vencimento de"
+              placeholder="Data inicial"
+              value={safeFilters.dateFrom}
+              onChange={(value) => handleFilterChange('dateFrom', value)}
+              leftSection={<IconCalendar size={16} />}
+            />
+          </Grid.Col>
+
+          {/* Data de vencimento - Até */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <DatePickerInput
+              label="Vencimento até"
+              placeholder="Data final"
+              value={safeFilters.dateTo}
+              onChange={(value) => handleFilterChange('dateTo', value)}
+              leftSection={<IconCalendar size={16} />}
+            />
+          </Grid.Col>
+
+          {/* Valor mínimo */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <NumberInput
+              label="Valor mínimo"
+              placeholder="R$ 0,00"
+              value={safeFilters.valorMin}
+              onChange={(value) => handleFilterChange('valorMin', value)}
+              leftSection={<IconCurrencyReal size={16} />}
+              min={0}
+              decimalScale={2}
+              thousandSeparator="."
+              decimalSeparator=","
+            />
+          </Grid.Col>
+
+          {/* Valor máximo */}
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <NumberInput
+              label="Valor máximo"
+              placeholder="R$ 0,00"
+              value={safeFilters.valorMax}
+              onChange={(value) => handleFilterChange('valorMax', value)}
+              leftSection={<IconCurrencyReal size={16} />}
+              min={0}
+              decimalScale={2}
+              thousandSeparator="."
+              decimalSeparator=","
+            />
+          </Grid.Col>
+        </Grid>
+
+        {/* Filtros ativos */}
+        {activeFiltersCount > 0 && (
+          <Box mt="md">
+            <Text size="sm" fw={500} mb="xs">
+              Filtros ativos:
             </Text>
-            
-            <Group gap="sm">
-              <Button
-                variant="outline"
-                leftSection={<IconX size={16} />}
-                onClick={clearFilters}
-                size="sm"
-              >
-                Limpar
-              </Button>
-              
-              <Button
-                onClick={applyFilters}
-                size="sm"
-              >
-                Aplicar Filtros
-              </Button>
+            <Group gap="xs">
+              {Object.entries(safeFilters).map(([key, value]) => {
+                if (!value || value === '') return null;
+                
+                let label = '';
+                let displayValue = value;
+                
+                switch (key) {
+                  case 'status':
+                    label = 'Status:';
+                    displayValue = statusOptions.find(opt => opt.value === value)?.label || value;
+                    break;
+                  case 'dateFrom':
+                    label = 'De:';
+                    displayValue = new Date(value).toLocaleDateString('pt-BR');
+                    break;
+                  case 'dateTo':
+                    label = 'Até:';
+                    displayValue = new Date(value).toLocaleDateString('pt-BR');
+                    break;
+                  case 'valorMin':
+                    label = 'Valor min:';
+                    displayValue = `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                    break;
+                  case 'valorMax':
+                    label = 'Valor max:';
+                    displayValue = `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                    break;
+                  case 'search':
+                    label = 'Busca:';
+                    displayValue = value;
+                    break;
+                  default:
+                    return null;
+                }
+                
+                return (
+                  <Badge
+                    key={key}
+                    variant="light"
+                    color="blue"
+                    rightSection={
+                      <ActionIcon
+                        size="xs"
+                        variant="transparent"
+                        onClick={() => handleClearFilter(key)}
+                      >
+                        <IconX size={10} />
+                      </ActionIcon>
+                    }
+                  >
+                    {label} {displayValue}
+                  </Badge>
+                );
+              })}
             </Group>
-          </Group>
-        </Stack>
+          </Box>
+        )}
       </Collapse>
     </Paper>
   );

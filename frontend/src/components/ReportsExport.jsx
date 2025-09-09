@@ -14,7 +14,9 @@ import {
   Grid,
   NumberInput,
   TextInput,
-  Divider
+  Divider,
+  Checkbox,
+  Badge
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
@@ -27,8 +29,11 @@ import {
   IconCalendar,
   IconCurrencyReal,
   IconCheck,
-  IconAlertCircle
+  IconAlertCircle,
+  IconFileSpreadsheet,
+  IconWorld
 } from '@tabler/icons-react';
+import { exportToPDF, exportToExcel, exportToCSV, exportToHTML, exportCustomReport } from '../utils/exportUtils';
 
 export function ReportsExport({ imoveis, statistics, isMobile = false }) {
   const theme = useMantineTheme();
@@ -37,204 +42,104 @@ export function ReportsExport({ imoveis, statistics, isMobile = false }) {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportType, setExportType] = useState('pdf');
   const [reportType, setReportType] = useState('summary');
-  const [dateRange, setDateRange] = useState({
-    start: null,
-    end: null
-  });
 
   // Opções de exportação
   const exportOptions = [
-    { value: 'pdf', label: 'PDF', icon: IconFileText },
-    { value: 'excel', label: 'Excel', icon: IconTable },
-    { value: 'csv', label: 'CSV', icon: IconTable }
+    { value: 'pdf', label: 'PDF', icon: IconFileText, color: 'red' },
+    { value: 'excel', label: 'Excel', icon: IconFileSpreadsheet, color: 'green' },
+    { value: 'csv', label: 'CSV', icon: IconTable, color: 'blue' },
+    { value: 'html', label: 'HTML', icon: IconWorld, color: 'violet' }
   ];
 
   // Tipos de relatório
   const reportTypes = [
-    { value: 'summary', label: 'Resumo Executivo' },
-    { value: 'detailed', label: 'Relatório Detalhado' },
-    { value: 'financial', label: 'Relatório Financeiro' },
-    { value: 'custom', label: 'Relatório Personalizado' }
+    { value: 'summary', label: 'Resumo Executivo', description: 'Visão geral dos dados' },
+    { value: 'detailed', label: 'Relatório Detalhado', description: 'Todos os dados completos' },
+    { value: 'financial', label: 'Relatório Financeiro', description: 'Foco em valores e pagamentos' },
+    { value: 'custom', label: 'Relatório Personalizado', description: 'Configure seus próprios filtros' }
   ];
 
-  // Gerar dados do relatório
-  const generateReportData = () => {
-    const filteredImoveis = imoveis.filter(imovel => {
-      if (dateRange.start && imovel.data_vencimento && new Date(imovel.data_vencimento) < dateRange.start) return false;
-      if (dateRange.end && imovel.data_vencimento && new Date(imovel.data_vencimento) > dateRange.end) return false;
-      return true;
-    });
+  // Opções de filtros
+  const [filters, setFilters] = useState({
+    status: '',
+    dateFrom: null,
+    dateTo: null,
+    valorMin: null,
+    valorMax: null,
+    includeStatistics: true,
+    includeCharts: false
+  });
 
-    const reportData = {
-      summary: {
-        totalImoveis: filteredImoveis.length,
-        totalValue: filteredImoveis.reduce((sum, imovel) => sum + (imovel.valor || 0), 0),
-        paidCount: filteredImoveis.filter(i => i.status_pagamento === 'PAGO').length,
-        pendingCount: filteredImoveis.filter(i => i.status_pagamento === 'PENDENTE').length,
-        overdueCount: filteredImoveis.filter(i => i.status_pagamento === 'ATRASADO').length,
-        paymentRate: filteredImoveis.length > 0 ? 
-          (filteredImoveis.filter(i => i.status_pagamento === 'PAGO').length / filteredImoveis.length * 100).toFixed(1) : 0
-      },
-      details: filteredImoveis,
-      statistics: statistics,
-      generatedAt: new Date().toLocaleString('pt-BR'),
-      dateRange: dateRange,
-      reportType: reportType // Adicionar tipo de relatório
-    };
-
-    return reportData;
-  };
-
-  // Exportar para PDF
-  const exportToPDF = async (data) => {
-    // Simular geração de PDF
-    for (let i = 0; i <= 100; i += 10) {
-      setExportProgress(i);
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // Criar conteúdo HTML para conversão em PDF
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Relatório de Imóveis Rurais</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-          h1 { color: #2563eb; text-align: center; margin-bottom: 30px; }
-          h2 { color: #1e40af; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-          .summary { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .summary-item { margin: 8px 0; font-size: 14px; }
-          .details { margin: 20px 0; }
-          .imovel { background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-          .imovel h3 { color: #1e40af; margin-top: 0; margin-bottom: 15px; font-size: 18px; }
-          .imovel p { margin: 8px 0; font-size: 14px; }
-          .imovel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-          .status-pago { color: #059669; font-weight: bold; }
-          .status-pendente { color: #d97706; font-weight: bold; }
-          .status-atrasado { color: #dc2626; font-weight: bold; }
-          @media print { body { margin: 10px; } .imovel { break-inside: avoid; } }
-        </style>
-      </head>
-      <body>
-        <h1>RELATÓRIO DE IMÓVEIS RURAIS</h1>
-        <p><strong>Gerado em:</strong> ${data.generatedAt}</p>
-        
-        <div class="summary">
-          <h2>RESUMO EXECUTIVO</h2>
-          <div class="summary-item"><strong>Total de Imóveis:</strong> ${data.summary.totalImoveis}</div>
-          <div class="summary-item"><strong>Valor Total:</strong> R$ ${data.summary.totalValue.toLocaleString('pt-BR')}</div>
-          <div class="summary-item"><strong>Imóveis Pagos:</strong> ${data.summary.paidCount}</div>
-          <div class="summary-item"><strong>Imóveis Pendentes:</strong> ${data.summary.pendingCount}</div>
-          <div class="summary-item"><strong>Imóveis Atrasados:</strong> ${data.summary.overdueCount}</div>
-          <div class="summary-item"><strong>Taxa de Pagamento:</strong> ${data.summary.paymentRate}%</div>
-        </div>
-        
-        <div class="details">
-          <h2>DADOS CADASTRAIS DOS PROPRIETÁRIOS</h2>
-          ${data.details.map((imovel, index) => `
-            <div class="imovel">
-              <h3>${index + 1}. ${imovel.proprietario || 'N/A'}</h3>
-              <div class="imovel-grid">
-                <div>
-                  <p><strong>CPF:</strong> ${imovel.cpf || 'N/A'}</p>
-                  <p><strong>Telefone:</strong> ${imovel.telefone || 'N/A'}</p>
-                  <p><strong>Sítio/Fazenda:</strong> ${imovel.sitio || 'N/A'}</p>
-                  <p><strong>Endereço:</strong> ${imovel.endereco || 'N/A'}</p>
-                  <p><strong>Localização:</strong> ${imovel.localizacao || 'N/A'}</p>
-                </div>
-                <div>
-                  <p><strong>CCIR:</strong> ${imovel.ccir || 'N/A'}</p>
-                  <p><strong>ITR:</strong> ${imovel.itr || 'N/A'}</p>
-                  <p><strong>Valor:</strong> R$ ${(imovel.valor || 0).toLocaleString('pt-BR')}</p>
-                  <p><strong>Status:</strong> <span class="status-${(imovel.status_pagamento || '').toLowerCase()}">${imovel.status_pagamento || 'N/A'}</span></p>
-                  <p><strong>Data Vencimento:</strong> ${imovel.data_vencimento ? new Date(imovel.data_vencimento).toLocaleDateString('pt-BR') : 'N/A'}</p>
-                  <p><strong>Data Pagamento:</strong> ${imovel.data_pagamento ? new Date(imovel.data_pagamento).toLocaleDateString('pt-BR') : 'N/A'}</p>
-                </div>
-              </div>
-              <p><strong>Observações:</strong> ${imovel.observacoes || 'N/A'}</p>
-            </div>
-          `).join('')}
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Criar e baixar arquivo HTML (que pode ser convertido para PDF pelo navegador)
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio-imoveis-${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Exportar para Excel/CSV
-  const exportToExcel = async (data) => {
-    for (let i = 0; i <= 100; i += 15) {
-      setExportProgress(i);
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // Criar CSV
-    const headers = ['Proprietário', 'CPF', 'Telefone', 'Sítio/Fazenda', 'Endereço', 'Localização', 'CCIR', 'ITR', 'Valor', 'Status', 'Data Vencimento', 'Data Pagamento', 'Observações'];
-    const csvContent = [
-      headers.join(','),
-      ...data.details.map(imovel => [
-        `"${imovel.proprietario || 'N/A'}"`,
-        `"${imovel.cpf || 'N/A'}"`,
-        `"${imovel.telefone || 'N/A'}"`,
-        `"${imovel.sitio || 'N/A'}"`,
-        `"${imovel.endereco || 'N/A'}"`,
-        `"${imovel.localizacao || 'N/A'}"`,
-        `"${imovel.ccir || 'N/A'}"`,
-        `"${imovel.itr || 'N/A'}"`,
-        imovel.valor || 0,
-        `"${imovel.status_pagamento || 'N/A'}"`,
-        imovel.data_vencimento ? new Date(imovel.data_vencimento).toLocaleDateString('pt-BR') : 'N/A',
-        imovel.data_pagamento ? new Date(imovel.data_pagamento).toLocaleDateString('pt-BR') : 'N/A',
-        `"${imovel.observacoes || 'N/A'}"`
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `imoveis-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  // Executar exportação
+  // Função de exportação
   const handleExport = async () => {
     setExporting(true);
     setExportProgress(0);
-
+    
     try {
-      const reportData = generateReportData();
-
-      if (exportType === 'pdf') {
-        await exportToPDF(reportData);
-      } else {
-        await exportToExcel(reportData);
+      // Simular progresso
+      const progressInterval = setInterval(() => {
+        setExportProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 100);
+      
+      // Aplicar filtros
+      let filteredData = imoveis;
+      if (filters.status) {
+        filteredData = filteredData.filter(item => item.status_pagamento === filters.status);
       }
-
-      // Sucesso
+      if (filters.dateFrom) {
+        filteredData = filteredData.filter(item => 
+          item.data_vencimento && new Date(item.data_vencimento) >= filters.dateFrom
+        );
+      }
+      if (filters.dateTo) {
+        filteredData = filteredData.filter(item => 
+          item.data_vencimento && new Date(item.data_vencimento) <= filters.dateTo
+        );
+      }
+      if (filters.valorMin !== null) {
+        filteredData = filteredData.filter(item => (item.valor || 0) >= filters.valorMin);
+      }
+      if (filters.valorMax !== null) {
+        filteredData = filteredData.filter(item => (item.valor || 0) <= filters.valorMax);
+      }
+      
+      // Gerar nome do arquivo
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `imoveis-rurais-${reportType}-${timestamp}`;
+      
+      // Exportar baseado no formato
+      switch (exportType) {
+        case 'pdf':
+          exportToPDF(filteredData, `${filename}.pdf`, `Relatório de Imóveis Rurais - ${reportTypes.find(r => r.value === reportType)?.label}`);
+          break;
+        case 'excel':
+          exportToExcel(filteredData, `${filename}.xlsx`, `Relatório de Imóveis Rurais - ${reportTypes.find(r => r.value === reportType)?.label}`);
+          break;
+        case 'csv':
+          exportToCSV(filteredData, `${filename}.csv`);
+          break;
+        case 'html':
+          exportToHTML(filteredData, `${filename}.html`, `Relatório de Imóveis Rurais - ${reportTypes.find(r => r.value === reportType)?.label}`);
+          break;
+        default:
+          throw new Error('Formato de exportação não suportado');
+      }
+      
+      setExportProgress(100);
       setTimeout(() => {
         setExporting(false);
         setExportProgress(0);
         close();
-      }, 1000);
-
+      }, 500);
+      
     } catch (error) {
-      console.error('Erro na exportação:', error);
+      console.error('Erro ao exportar:', error);
       setExporting(false);
       setExportProgress(0);
     }
@@ -242,135 +147,169 @@ export function ReportsExport({ imoveis, statistics, isMobile = false }) {
 
   return (
     <>
-      <Paper shadow="sm" p="md" radius="md" mb="md">
-        <Group justify="space-between">
-          <Group>
-            <IconChartBar size={24} color={theme.colors.blue[6]} />
-            <Text size="lg" fw={600}>Relatórios e Exportação</Text>
-          </Group>
-          
-          <Group gap="sm">
-            <Button
-              leftSection={<IconFileExport size={16} />}
-              onClick={open}
-              variant="light"
-              size={isMobile ? 'sm' : 'md'}
-            >
-              {isMobile ? 'Exportar' : 'Gerar Relatório'}
-            </Button>
-          </Group>
-        </Group>
-      </Paper>
+      <Button
+        leftSection={<IconFileExport size={16} />}
+        onClick={open}
+        variant="light"
+        color="blue"
+        size={isMobile ? 'sm' : 'md'}
+      >
+        {isMobile ? 'Exportar' : 'Exportar Relatórios'}
+      </Button>
 
       <Modal
         opened={opened}
         onClose={close}
-        title={
-          <Group>
-            <IconFileExport size={20} />
-            <Text>Gerar Relatório</Text>
-          </Group>
-        }
-        size={isMobile ? 'sm' : 'md'}
+        title="Exportar Relatórios"
+        size="lg"
+        centered
       >
         <Stack gap="md">
-          {exporting ? (
-            <Stack gap="md">
-              <Alert
-                icon={<IconCheck size={16} />}
-                title="Exportando..."
-                color="blue"
-              >
-                Gerando seu relatório, aguarde...
-              </Alert>
+          {/* Tipo de relatório */}
+          <Select
+            label="Tipo de Relatório"
+            placeholder="Selecione o tipo"
+            data={reportTypes.map(type => ({
+              value: type.value,
+              label: type.label
+            }))}
+            value={reportType}
+            onChange={setReportType}
+            leftSection={<IconChartBar size={16} />}
+          />
+          
+          {reportType && (
+            <Text size="sm" c="dimmed">
+              {reportTypes.find(r => r.value === reportType)?.description}
+            </Text>
+          )}
+
+          {/* Formato de exportação */}
+          <Select
+            label="Formato de Exportação"
+            placeholder="Selecione o formato"
+            data={exportOptions.map(option => ({
+              value: option.value,
+              label: option.label
+            }))}
+            value={exportType}
+            onChange={setExportType}
+            leftSection={<IconFileText size={16} />}
+          />
+
+          {/* Filtros avançados */}
+          {reportType === 'custom' && (
+            <Paper p="md" withBorder>
+              <Text fw={500} mb="md">Filtros Personalizados</Text>
               
-              <Progress 
-                value={exportProgress} 
-                size="lg" 
-                radius="md"
-                striped
-                animated
-              />
-              
-              <Text size="sm" ta="center" c="dimmed">
-                {exportProgress}% concluído
-              </Text>
-            </Stack>
-          ) : (
-            <>
               <Grid>
-                <Grid.Col span={isMobile ? 12 : 6}>
+                <Grid.Col span={6}>
                   <Select
-                    label="Tipo de Exportação"
-                    placeholder="Selecione o formato"
-                    data={exportOptions.map(opt => ({
-                      value: opt.value,
-                      label: opt.label
-                    }))}
-                    value={exportType}
-                    onChange={setExportType}
-                    leftSection={<IconDownload size={16} />}
+                    label="Status"
+                    placeholder="Todos os status"
+                    data={[
+                      { value: '', label: 'Todos' },
+                      { value: 'PAGO', label: 'Pago' },
+                      { value: 'PENDENTE', label: 'Pendente' },
+                      { value: 'ATRASADO', label: 'Atrasado' }
+                    ]}
+                    value={filters.status}
+                    onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
                   />
                 </Grid.Col>
                 
-                <Grid.Col span={isMobile ? 12 : 6}>
-                  <Select
-                    label="Tipo de Relatório"
-                    placeholder="Selecione o tipo"
-                    data={reportTypes}
-                    value={reportType}
-                    onChange={setReportType}
-                    leftSection={<IconChartBar size={16} />}
-                  />
-                </Grid.Col>
-                
-                <Grid.Col span={isMobile ? 12 : 6}>
+                <Grid.Col span={6}>
                   <DatePickerInput
-                    label="Data Início"
+                    label="Data de Vencimento - De"
                     placeholder="Selecione a data"
-                    value={dateRange.start}
-                    onChange={(value) => setDateRange(prev => ({ ...prev, start: value }))}
+                    value={filters.dateFrom}
+                    onChange={(date) => setFilters(prev => ({ ...prev, dateFrom: date }))}
                     leftSection={<IconCalendar size={16} />}
                   />
                 </Grid.Col>
                 
-                <Grid.Col span={isMobile ? 12 : 6}>
+                <Grid.Col span={6}>
                   <DatePickerInput
-                    label="Data Fim"
+                    label="Data de Vencimento - Até"
                     placeholder="Selecione a data"
-                    value={dateRange.end}
-                    onChange={(value) => setDateRange(prev => ({ ...prev, end: value }))}
+                    value={filters.dateTo}
+                    onChange={(date) => setFilters(prev => ({ ...prev, dateTo: date }))}
                     leftSection={<IconCalendar size={16} />}
+                  />
+                </Grid.Col>
+                
+                <Grid.Col span={6}>
+                  <NumberInput
+                    label="Valor Mínimo"
+                    placeholder="R$ 0,00"
+                    value={filters.valorMin}
+                    onChange={(value) => setFilters(prev => ({ ...prev, valorMin: value }))}
+                    leftSection={<IconCurrencyReal size={16} />}
+                    min={0}
+                    decimalScale={2}
+                    thousandSeparator="."
+                    decimalSeparator=","
                   />
                 </Grid.Col>
               </Grid>
+              
+              <Divider my="md" />
+              
+              <Stack gap="sm">
+                <Checkbox
+                  label="Incluir estatísticas"
+                  checked={filters.includeStatistics}
+                  onChange={(e) => setFilters(prev => ({ ...prev, includeStatistics: e.target.checked }))}
+                />
+                <Checkbox
+                  label="Incluir gráficos (apenas PDF)"
+                  checked={filters.includeCharts}
+                  onChange={(e) => setFilters(prev => ({ ...prev, includeCharts: e.target.checked }))}
+                  disabled={exportType !== 'pdf'}
+                />
+              </Stack>
+            </Paper>
+          )}
 
-              <Divider />
+          {/* Resumo da exportação */}
+          <Paper p="md" withBorder bg="gray.0">
+            <Text fw={500} mb="sm">Resumo da Exportação</Text>
+            <Group gap="md">
+              <Badge color="blue" variant="light">
+                {imoveis.length} imóveis
+              </Badge>
+              <Badge color="green" variant="light">
+                {exportType?.toUpperCase() || 'N/A'}
+              </Badge>
+              <Badge color="orange" variant="light">
+                {reportTypes.find(r => r.value === reportType)?.label || 'N/A'}
+              </Badge>
+            </Group>
+          </Paper>
 
-              <Group justify="space-between">
-                <Text size="sm" c="dimmed">
-                  {imoveis.length} imóveis disponíveis
-                </Text>
-                
-                <Group gap="sm">
-                  <Button
-                    variant="outline"
-                    onClick={close}
-                    size="sm"
-                  >
-                    Cancelar
-                  </Button>
-                  
-                  <Button
-                    onClick={handleExport}
-                    leftSection={<IconDownload size={16} />}
-                    size="sm"
-                  >
-                    Exportar
-                  </Button>
-                </Group>
-              </Group>
-            </>
+          {/* Botões de ação */}
+          <Group justify="flex-end" mt="md">
+            <Button variant="outline" onClick={close} disabled={exporting}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleExport}
+              loading={exporting}
+              leftSection={<IconDownload size={16} />}
+              disabled={!exportType || !reportType}
+            >
+              {exporting ? 'Exportando...' : 'Exportar'}
+            </Button>
+          </Group>
+
+          {/* Progresso da exportação */}
+          {exporting && (
+            <Stack gap="sm">
+              <Text size="sm" c="dimmed">
+                Exportando relatório...
+              </Text>
+              <Progress value={exportProgress} animated />
+            </Stack>
           )}
         </Stack>
       </Modal>

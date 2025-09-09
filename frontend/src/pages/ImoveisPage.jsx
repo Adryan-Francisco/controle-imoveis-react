@@ -1,6 +1,6 @@
 // src/pages/ImoveisPage.jsx
-import React, { useState, useCallback } from 'react';
-import { Container, Title, Text, Button, Group, Breadcrumbs, Anchor, useMantineTheme } from '@mantine/core';
+import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { Container, Title, Text, Button, Group, Breadcrumbs, Anchor, useMantineTheme, Loader, Center } from '@mantine/core';
 import { IconArrowLeft, IconHome, IconList } from '@tabler/icons-react';
 import { useAuth } from '../AuthProvider';
 import { useImoveis } from '../hooks/useImoveis';
@@ -10,6 +10,12 @@ import { ImovelTable } from '../components/ImovelTable';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { AdvancedFilters } from '../components/AdvancedFilters';
 
+// Lazy loading para componentes pesados
+const LazyImovelForm = lazy(() => import('../components/ImovelForm').then(module => ({ default: module.ImovelForm })));
+const LazyImovelTable = lazy(() => import('../components/ImovelTable').then(module => ({ default: module.ImovelTable })));
+const LazyDeleteConfirmModal = lazy(() => import('../components/DeleteConfirmModal').then(module => ({ default: module.DeleteConfirmModal })));
+const LazyAdvancedFilters = lazy(() => import('../components/AdvancedFilters').then(module => ({ default: module.AdvancedFilters })));
+
 export function ImoveisPage({ isMobile, onBack }) {
   const theme = useMantineTheme();
   const { user } = useAuth();
@@ -18,7 +24,14 @@ export function ImoveisPage({ isMobile, onBack }) {
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [selectedImovel, setSelectedImovel] = useState(null);
-  const [filteredImoveis, setFilteredImoveis] = useState([]);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    dateFrom: null,
+    dateTo: null,
+    valorMin: null,
+    valorMax: null
+  });
 
   const { 
     imoveis, 
@@ -27,17 +40,81 @@ export function ImoveisPage({ isMobile, onBack }) {
     createImovel, 
     updateImovel, 
     deleteImovel 
-  } = useImoveis(user);
+  } = useImoveis(user, { page: 1, pageSize: 100 }); // Aumentar pageSize para ver todos os imóveis
 
-  // Inicializar imóveis filtrados
-  React.useEffect(() => {
-    setFilteredImoveis(imoveis);
-  }, [imoveis]);
 
-  // Função para lidar com filtros
-  const handleFilter = useCallback((filtered) => {
-    setFilteredImoveis(filtered);
+  // Função para lidar com mudanças de filtros
+  const handleFilterChange = useCallback((key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
   }, []);
+
+  // Função para limpar filtros
+  const handleClearFilters = useCallback(() => {
+    setFilters({
+      search: '',
+      status: '',
+      dateFrom: null,
+      dateTo: null,
+      valorMin: null,
+      valorMax: null
+    });
+  }, []);
+
+  // Aplicar filtros aos imóveis com memoização
+  const filteredImoveis = useMemo(() => {
+    let filtered = [...imoveis];
+    
+    // Filtro de busca
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(imovel => {
+        const searchableFields = [
+          imovel.proprietario,
+          imovel.sitio,
+          imovel.endereco,
+          imovel.cpf,
+          imovel.telefone
+        ].filter(Boolean).join(' ').toLowerCase();
+        return searchableFields.includes(searchTerm);
+      });
+    }
+    
+    // Filtro de status
+    if (filters.status) {
+      filtered = filtered.filter(imovel => imovel.status_pagamento === filters.status);
+    }
+    
+    // Filtros de data
+    if (filters.dateFrom) {
+      filtered = filtered.filter(imovel => 
+        imovel.data_vencimento && new Date(imovel.data_vencimento) >= filters.dateFrom
+      );
+    }
+    
+    if (filters.dateTo) {
+      filtered = filtered.filter(imovel => 
+        imovel.data_vencimento && new Date(imovel.data_vencimento) <= filters.dateTo
+      );
+    }
+    
+    // Filtros de valor
+    if (filters.valorMin !== null) {
+      filtered = filtered.filter(imovel => (imovel.valor || 0) >= filters.valorMin);
+    }
+    
+    if (filters.valorMax !== null) {
+      filtered = filtered.filter(imovel => (imovel.valor || 0) <= filters.valorMax);
+    }
+    
+    return filtered;
+  }, [imoveis, filters]);
+
+  // Contar filtros ativos com memoização
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter(value => 
+      value !== '' && value !== null && value !== undefined
+    ).length;
+  }, [filters]);
 
   const handleSubmit = useCallback(async (values) => {
     const isEditing = !!values.id;
@@ -80,14 +157,15 @@ export function ImoveisPage({ isMobile, onBack }) {
     openDeleteModal(); 
   }, [openDeleteModal]);
 
-  const items = [
+  // Memoizar breadcrumb para evitar re-renders
+  const breadcrumbItems = useMemo(() => [
     { title: 'Dashboard', href: '#' },
     { title: 'Imóveis', href: '#' },
   ].map((item, index) => (
     <Anchor href={item.href} key={index} onClick={(event) => { event.preventDefault(); onBack(); }}>
       {item.title}
     </Anchor>
-  ));
+  )), [onBack]);
 
   return (
     <Container size="xl" my="xl">
@@ -107,45 +185,71 @@ export function ImoveisPage({ isMobile, onBack }) {
         </Button>
       </Group>
       
-      <Breadcrumbs mb="lg">{items}</Breadcrumbs>
+      <Breadcrumbs mb="lg">{breadcrumbItems}</Breadcrumbs>
 
       <Text size="lg" mb="xl">
         Gerencie todos os seus imóveis rurais. Adicione, edite ou remova registros conforme necessário.
       </Text>
 
       {/* Filtros Avançados */}
-      <AdvancedFilters 
-        imoveis={imoveis}
-        onFilter={handleFilter}
-        isMobile={isMobile}
-      />
+      <Suspense fallback={
+        <Center py="xl">
+          <Loader size="sm" />
+        </Center>
+      }>
+        <LazyAdvancedFilters 
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          activeFiltersCount={activeFiltersCount}
+          isMobile={isMobile}
+        />
+      </Suspense>
 
       {/* Modal de Formulário */}
-      <ImovelForm 
-        opened={modalOpened}
-        onClose={closeModal}
-        onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
-        initialValues={selectedImovel || {}}
-      />
+      <Suspense fallback={
+        <Center py="xl">
+          <Loader size="sm" />
+        </Center>
+      }>
+        <LazyImovelForm 
+          opened={modalOpened}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          initialValues={selectedImovel || {}}
+        />
+      </Suspense>
 
       {/* Modal de Confirmação de Exclusão */}
-      <DeleteConfirmModal 
-        opened={deleteModalOpened}
-        onClose={closeDeleteModal}
-        onConfirm={handleDelete}
-        isSubmitting={isSubmitting}
-        selectedImovel={selectedImovel}
-      />
+      <Suspense fallback={
+        <Center py="xl">
+          <Loader size="sm" />
+        </Center>
+      }>
+        <LazyDeleteConfirmModal 
+          opened={deleteModalOpened}
+          onClose={closeDeleteModal}
+          onConfirm={handleDelete}
+          isSubmitting={isSubmitting}
+          selectedImovel={selectedImovel}
+        />
+      </Suspense>
       
       {/* Tabela Principal */}
-      <ImovelTable 
-        imoveis={filteredImoveis}
-        loading={loading}
-        onAddClick={openCreateModal}
-        onEditClick={openEditModal}
-        onDeleteClick={openConfirmDeleteModal}
-      />
+      <Suspense fallback={
+        <Center py="xl">
+          <Loader size="sm" />
+        </Center>
+      }>
+        <LazyImovelTable 
+          imoveis={filteredImoveis}
+          loading={loading}
+          onAddClick={openCreateModal}
+          onEditClick={openEditModal}
+          onDeleteClick={openConfirmDeleteModal}
+        />
+      </Suspense>
     </Container>
   );
 }

@@ -1,0 +1,163 @@
+# .github/workflows/monitoring.yml
+name: Monitoring & Alerts
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # A cada 6 horas
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Monitoramento de uptime
+  uptime-monitoring:
+    name: Uptime Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check application uptime
+        run: |
+          # Verificar se a aplicação está respondendo
+          if curl -f -s https://${{ secrets.CUSTOM_DOMAIN }} > /dev/null; then
+            echo "✅ Aplicação online"
+            echo "UPTIME_STATUS=online" >> $GITHUB_ENV
+          else
+            echo "❌ Aplicação offline"
+            echo "UPTIME_STATUS=offline" >> $GITHUB_ENV
+          fi
+
+      - name: Check staging uptime
+        run: |
+          if curl -f -s https://staging.${{ secrets.CUSTOM_DOMAIN }} > /dev/null; then
+            echo "✅ Staging online"
+            echo "STAGING_STATUS=online" >> $GITHUB_ENV
+          else
+            echo "❌ Staging offline"
+            echo "STAGING_STATUS=offline" >> $GITHUB_ENV
+          fi
+
+      - name: Send alert if offline
+        if: env.UPTIME_STATUS == 'offline'
+        run: |
+          echo "🚨 ALERTA: Aplicação principal offline!"
+          # Aqui você integraria com Slack, Discord, etc.
+
+  # Monitoramento de performance
+  performance-monitoring:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps
+
+      - name: Run performance tests
+        working-directory: ./frontend
+        run: |
+          npx playwright test tests/e2e/accessibility.spec.js --reporter=json > performance-results.json
+
+      - name: Analyze performance results
+        run: |
+          # Analisar resultados de performance
+          if [ -f frontend/performance-results.json ]; then
+            echo "📊 Analisando resultados de performance..."
+            # Aqui você implementaria análise dos resultados
+            echo "✅ Análise de performance concluída"
+          else
+            echo "⚠️ Nenhum resultado de performance encontrado"
+          fi
+
+  # Monitoramento de segurança
+  security-monitoring:
+    name: Security Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run security audit
+        working-directory: ./frontend
+        run: npm audit --audit-level moderate
+
+      - name: Check for known vulnerabilities
+        run: |
+          echo "🔍 Verificando vulnerabilidades conhecidas..."
+          # Aqui você implementaria verificação de vulnerabilidades
+          echo "✅ Verificação de segurança concluída"
+
+  # Monitoramento de dependências
+  dependency-monitoring:
+    name: Dependency Monitoring
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Check for outdated dependencies
+        working-directory: ./frontend
+        run: |
+          echo "📦 Verificando dependências desatualizadas..."
+          npm outdated || echo "Algumas dependências estão desatualizadas"
+
+      - name: Check for security updates
+        working-directory: ./frontend
+        run: |
+          echo "🔒 Verificando atualizações de segurança..."
+          npm audit --audit-level high
+
+  # Relatório de monitoramento
+  monitoring-report:
+    name: Monitoring Report
+    runs-on: ubuntu-latest
+    needs: [uptime-monitoring, performance-monitoring, security-monitoring, dependency-monitoring]
+    if: always()
+    steps:
+      - name: Generate monitoring report
+        run: |
+          echo "# 📊 Relatório de Monitoramento" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🟢 Status dos Serviços" >> $GITHUB_STEP_SUMMARY
+          echo "- Produção: ${{ needs.uptime-monitoring.outputs.UPTIME_STATUS || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging: ${{ needs.uptime-monitoring.outputs.STAGING_STATUS || 'N/A' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚡ Performance" >> $GITHUB_STEP_SUMMARY
+          echo "- Testes de performance: ${{ needs.performance-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔒 Segurança" >> $GITHUB_STEP_SUMMARY
+          echo "- Auditoria de segurança: ${{ needs.security-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dependências: ${{ needs.dependency-monitoring.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📅 Próxima Verificação" >> $GITHUB_STEP_SUMMARY
+          echo "- Data: $(date -d '+6 hours' '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY

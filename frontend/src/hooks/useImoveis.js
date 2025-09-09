@@ -1,121 +1,140 @@
 // src/hooks/useImoveis.js
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
+import { useCallback } from 'react';
+import { useImoveisQuery, useCreateImovel, useUpdateImovel, useDeleteImovel } from './useImoveisQuery';
+import { useSecurityValidation } from './useSecurityValidation';
 import { useErrorHandler } from './useErrorHandler';
+import { validateImovelData, formatCurrency } from '../utils';
 
-export function useImoveis(user) {
-  const [imoveis, setImoveis] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { handleError, handleSuccess } = useErrorHandler();
+export function useImoveis(user, options = {}) {
+  const { page = 1, pageSize = 10, filters = {} } = options;
+  
+  // Hooks de segurança e tratamento de erro
+  const { validateImovelData, sanitizeImovelData, checkRateLimit } = useSecurityValidation();
+  const { handleError, handleSuccess, handleValidationError } = useErrorHandler();
+  
+  // Usar React Query para buscar dados
+  const { 
+    data: queryData, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useImoveisQuery(user?.id, { page, pageSize, filters });
+  
+  // Mutations
+  const createMutation = useCreateImovel();
+  const updateMutation = useUpdateImovel();
+  const deleteMutation = useDeleteImovel();
+  
+  const imoveis = queryData?.data || [];
+  const totalCount = queryData?.totalCount || 0;
+  const totalPages = queryData?.totalPages || 0;
 
-  const fetchImoveis = useCallback(async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('ControleImoveisRurais')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('id', { ascending: true });
-      
-      if (error) {
-        throw error;
-      }
-      
-      setImoveis(data || []);
-    } catch (error) {
-      handleError(error, 'fetchImoveis');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
+  // Funções de CRUD usando mutations com otimização e segurança
   const createImovel = useCallback(async (imovelData) => {
-    setIsSubmitting(true);
+    if (!user?.id) {
+      return { success: false, error: 'Usuário não autenticado' };
+    }
+    
+    // Verificar rate limiting
+    const rateLimitCheck = checkRateLimit('create_imovel', 5, 60000);
+    if (!rateLimitCheck.allowed) {
+      return { success: false, error: rateLimitCheck.error };
+    }
+    
+    // Validar dados
+    const validation = validateImovelData(imovelData);
+    if (!validation.isValid) {
+      handleValidationError(validation.errors);
+      return { success: false, error: 'Dados inválidos', errors: validation.errors };
+    }
+    
+    // Sanitizar dados
+    const sanitizedData = sanitizeImovelData(imovelData);
+    
     try {
-      const { error } = await supabase
-        .from('ControleImoveisRurais')
-        .insert([{ ...imovelData, user_id: user.id }]);
-      
-      if (error) {
-        throw error;
-      }
-      
-      handleSuccess('Registro criado com sucesso.');
-      
-      await fetchImoveis();
+      await createMutation.mutateAsync({ 
+        imovelData: sanitizedData, 
+        userId: user.id 
+      });
+      handleSuccess('Imóvel criado com sucesso!');
       return { success: true };
     } catch (error) {
-      handleError(error, 'createImovel');
-      return { success: false, error };
-    } finally {
-      setIsSubmitting(false);
+      handleError(error, 'criar imóvel');
+      return { success: false, error: error.message || 'Erro desconhecido' };
     }
-  }, [user, fetchImoveis]);
+  }, [createMutation, user?.id, checkRateLimit, validateImovelData, sanitizeImovelData, handleValidationError, handleSuccess, handleError]);
 
   const updateImovel = useCallback(async (id, imovelData) => {
-    setIsSubmitting(true);
+    if (!id) {
+      return { success: false, error: 'ID do imóvel é obrigatório' };
+    }
+    
+    // Verificar rate limiting
+    const rateLimitCheck = checkRateLimit('update_imovel', 10, 60000);
+    if (!rateLimitCheck.allowed) {
+      return { success: false, error: rateLimitCheck.error };
+    }
+    
+    // Validar dados
+    const validation = validateImovelData(imovelData);
+    if (!validation.isValid) {
+      handleValidationError(validation.errors);
+      return { success: false, error: 'Dados inválidos', errors: validation.errors };
+    }
+    
+    // Sanitizar dados
+    const sanitizedData = sanitizeImovelData(imovelData);
+    
     try {
-      const { error } = await supabase
-        .from('ControleImoveisRurais')
-        .update(imovelData)
-        .eq('id', id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      handleSuccess('Registro atualizado com sucesso.');
-      
-      await fetchImoveis();
+      await updateMutation.mutateAsync({ id, imovelData: sanitizedData });
+      handleSuccess('Imóvel atualizado com sucesso!');
       return { success: true };
     } catch (error) {
-      handleError(error, 'updateImovel');
-      return { success: false, error };
-    } finally {
-      setIsSubmitting(false);
+      handleError(error, 'atualizar imóvel');
+      return { success: false, error: error.message || 'Erro desconhecido' };
     }
-  }, [fetchImoveis]);
+  }, [updateMutation, checkRateLimit, validateImovelData, sanitizeImovelData, handleValidationError, handleSuccess, handleError]);
 
   const deleteImovel = useCallback(async (id) => {
-    setIsSubmitting(true);
+    if (!id) {
+      return { success: false, error: 'ID do imóvel é obrigatório' };
+    }
+    
+    // Verificar rate limiting
+    const rateLimitCheck = checkRateLimit('delete_imovel', 3, 60000);
+    if (!rateLimitCheck.allowed) {
+      return { success: false, error: rateLimitCheck.error };
+    }
+    
     try {
-      const { error } = await supabase
-        .from('ControleImoveisRurais')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      handleSuccess('Registro deletado com sucesso.');
-      
-      await fetchImoveis();
+      await deleteMutation.mutateAsync(id);
+      handleSuccess('Imóvel excluído com sucesso!');
       return { success: true };
     } catch (error) {
-      handleError(error, 'deleteImovel');
-      return { success: false, error };
-    } finally {
-      setIsSubmitting(false);
+      handleError(error, 'deletar imóvel');
+      return { success: false, error: error.message || 'Erro desconhecido' };
     }
-  }, [fetchImoveis]);
+  }, [deleteMutation, checkRateLimit, handleSuccess, handleError]);
 
-  useEffect(() => {
-    if (user) {
-      fetchImoveis();
-    }
-  }, [user?.id]); // Dependência mais específica
+  // Função para recarregar dados
+  const fetchImoveis = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return {
     imoveis,
-    loading,
-    isSubmitting,
+    loading: isLoading,
+    isSubmitting: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    error,
+    totalCount,
+    totalPages,
     fetchImoveis,
     createImovel,
     updateImovel,
-    deleteImovel
+    deleteImovel,
+    // Estados das mutations
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 }

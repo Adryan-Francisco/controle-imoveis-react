@@ -6,9 +6,27 @@ export function useChartsData(imoveis) {
   const theme = useMantineTheme();
 
   const statusData = useMemo(() => {
-    const imoveisPagos = imoveis.filter(i => i.status_pagamento === 'PAGO').length;
-    const imoveisPendentes = imoveis.filter(i => i.status_pagamento === 'PENDENTE').length;
-    const imoveisAtrasados = imoveis.filter(i => i.status_pagamento === 'ATRASADO').length;
+    // Encontrar o campo de status correto
+    const statusField = imoveis.length > 0 ? Object.keys(imoveis[0]).find(key => 
+      key.toLowerCase().includes('status') || 
+      key.toLowerCase().includes('pagamento') ||
+      key.toLowerCase().includes('pago')
+    ) : null;
+    
+    const imoveisPagos = imoveis.filter(i => {
+      const status = i[statusField] || i.status_pagamento || i.status;
+      return status === 'PAGO' || status === 'pago' || status === 'Pago';
+    }).length;
+    
+    const imoveisPendentes = imoveis.filter(i => {
+      const status = i[statusField] || i.status_pagamento || i.status;
+      return status === 'PENDENTE' || status === 'pendente' || status === 'Pendente';
+    }).length;
+    
+    const imoveisAtrasados = imoveis.filter(i => {
+      const status = i[statusField] || i.status_pagamento || i.status;
+      return status === 'ATRASADO' || status === 'atrasado' || status === 'Atrasado';
+    }).length;
 
     return [
       { name: 'Pagos', value: imoveisPagos, color: theme.colors.green[6] },

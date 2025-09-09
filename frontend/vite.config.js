@@ -60,4 +60,45 @@ export default defineConfig({
     })
   ],
   base: '/controle-imoveis-react/',
+  build: {
+    // Otimizações de build
+    target: 'esnext',
+    minify: 'esbuild',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Code splitting otimizado
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@mantine/core', '@mantine/hooks', '@mantine/dates'],
+          charts: ['recharts'],
+          utils: ['lodash', 'dayjs']
+        },
+        // Otimização de chunks
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    },
+    // Otimizações de tamanho
+    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: false
+  },
+  // Otimizações de desenvolvimento
+  server: {
+    hmr: {
+      overlay: false
+    }
+  },
+  // Otimizações de dependências
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      '@mantine/core',
+      '@mantine/hooks',
+      '@mantine/dates',
+      '@tabler/icons-react'
+    ]
+  }
 })

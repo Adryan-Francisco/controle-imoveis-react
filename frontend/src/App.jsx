@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './AuthProvider';
 import { MantineProvider, createTheme } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 import { usePWA } from './hooks/usePWA';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import Auth from './Auth';
+import { LoginForm } from './components/LoginForm';
 import Dashboard from './Dashboard';
 
 // Tema personalizado mais moderno com melhor acessibilidade
@@ -134,22 +136,41 @@ function AppContent({ colorScheme, toggleColorScheme }) {
       {canInstall && <PWAInstallPrompt onInstall={installApp} onDismiss={() => {}} />}
       
       {/* Esta é a linha mais importante: ela decide qual página mostrar */}
-      {!session ? <Auth /> : <Dashboard toggleColorScheme={toggleColorScheme} colorScheme={colorScheme} />}
+      {!session ? <LoginForm /> : <Dashboard toggleColorScheme={toggleColorScheme} colorScheme={colorScheme} />}
     </>
   );
 }
+
+// Configuração do React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      cacheTime: 10 * 60 * 1000, // 10 minutos
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 export default function App() {
   const [colorScheme, setColorScheme] = useState('light');
   const toggleColorScheme = () => setColorScheme((current) => (current === 'dark' ? 'light' : 'dark'));
   
   return (
-    <MantineProvider theme={theme} defaultColorScheme={colorScheme} withGlobalStyles withNormalizeCSS>
-      <ErrorBoundary>
-        <AuthProvider>
-          <AppContent colorScheme={colorScheme} toggleColorScheme={toggleColorScheme} />
-        </AuthProvider>
-      </ErrorBoundary>
-    </MantineProvider>
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider theme={theme} defaultColorScheme={colorScheme} withGlobalStyles withNormalizeCSS>
+        <ErrorBoundary>
+          <AuthProvider>
+            <AppContent colorScheme={colorScheme} toggleColorScheme={toggleColorScheme} />
+          </AuthProvider>
+        </ErrorBoundary>
+      </MantineProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }

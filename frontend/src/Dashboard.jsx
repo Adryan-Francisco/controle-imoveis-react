@@ -32,7 +32,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
   const [sidebarOpened, { open: openSidebar, close: closeSidebar }] = useDisclosure(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
 
-  const { imoveis } = useImoveis(user);
+  const { imoveis } = useImoveis(user, { page: 1, pageSize: 1000 }); // Carregar todos os dados
 
   // Função para navegação
   const handleNavigate = useCallback((page) => {

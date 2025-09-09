@@ -1,0 +1,108 @@
+# .github/workflows/pages.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build da aplicação
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./frontend/dist
+
+  # Deploy para GitHub Pages
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  # Verificação pós-deploy
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Check if site is accessible
+        run: |
+          if curl -f -s https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} > /dev/null; then
+            echo "✅ Site está acessível"
+          else
+            echo "❌ Site não está acessível"
+            exit 1
+          fi
+
+      - name: Run basic health checks
+        run: |
+          echo "🔍 Executando verificações de saúde..."
+          # Verificar se a página principal carrega
+          curl -s https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }} | grep -q "Controle de Imóveis" || exit 1
+          echo "✅ Verificações de saúde passaram"
+
+  # Notificação de deploy
+  notify:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy, verify-deployment]
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.deploy.result == 'success' && needs.verify-deployment.result == 'success'
+        run: |
+          echo "🎉 Deploy realizado com sucesso!"
+          echo "🔗 URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          echo "📅 Data: $(date '+%Y-%m-%d %H:%M:%S')"
+
+      - name: Notify failure
+        if: needs.deploy.result == 'failure' || needs.verify-deployment.result == 'failure'
+        run: |
+          echo "❌ Deploy falhou!"
+          echo "🔍 Verifique os logs para mais detalhes"
+          echo "📅 Data: $(date '+%Y-%m-%d %H:%M:%S')"

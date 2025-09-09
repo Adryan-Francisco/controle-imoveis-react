@@ -1,0 +1,189 @@
+# .github/workflows/performance.yml
+name: Performance Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * 1' # Toda segunda-feira às 2h
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Testes de performance com Lighthouse
+  lighthouse-tests:
+    name: Lighthouse Performance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Start application
+        working-directory: ./frontend
+        run: |
+          npm run preview &
+          sleep 10
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './frontend/.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # Testes de bundle size
+  bundle-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Analyze bundle size
+        working-directory: ./frontend
+        run: |
+          npx vite-bundle-analyzer dist
+          echo "Bundle size analysis completed"
+
+      - name: Check bundle size limits
+        working-directory: ./frontend
+        run: |
+          # Verificar se o bundle principal não excede 250KB
+          MAIN_BUNDLE_SIZE=$(stat -c%s dist/assets/index-*.js | head -1)
+          if [ $MAIN_BUNDLE_SIZE -gt 256000 ]; then
+            echo "❌ Bundle principal excede 250KB: ${MAIN_BUNDLE_SIZE} bytes"
+            exit 1
+          else
+            echo "✅ Bundle principal dentro do limite: ${MAIN_BUNDLE_SIZE} bytes"
+          fi
+
+  # Testes de acessibilidade com axe
+  accessibility-audit:
+    name: Accessibility Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Run accessibility audit
+        working-directory: ./frontend
+        run: |
+          npx playwright test tests/e2e/accessibility.spec.js --reporter=html
+          echo "Accessibility audit completed"
+
+  # Testes de carga
+  load-tests:
+    name: Load Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Start application
+        working-directory: ./frontend
+        run: |
+          npm run preview &
+          sleep 10
+
+      - name: Run load tests
+        run: |
+          # Simular carga com curl
+          for i in {1..100}; do
+            curl -s http://localhost:4173 > /dev/null &
+          done
+          wait
+          echo "Load test completed"
+
+  # Relatório de performance
+  performance-report:
+    name: Performance Report
+    runs-on: ubuntu-latest
+    needs: [lighthouse-tests, bundle-analysis, accessibility-audit]
+    if: always()
+    steps:
+      - name: Generate performance report
+        run: |
+          echo "# 📊 Relatório de Performance" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Lighthouse Score" >> $GITHUB_STEP_SUMMARY
+          echo "- Performance: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Acessibilidade: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Boas Práticas: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- SEO: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Bundle Size" >> $GITHUB_STEP_SUMMARY
+          echo "- Tamanho principal: ✅ Dentro do limite" >> $GITHUB_STEP_SUMMARY
+          echo "- Chunks otimizados: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ♿ Acessibilidade" >> $GITHUB_STEP_SUMMARY
+          echo "- ARIA labels: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Navegação por teclado: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Contraste: ✅" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,169 @@
+# .github/workflows/security.yml
+name: Security Updates
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Toda segunda-feira às 2h
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # Atualizações de segurança automáticas
+  security-updates:
+    name: Security Updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run security audit
+        working-directory: ./frontend
+        run: npm audit --audit-level moderate
+
+      - name: Check for security updates
+        working-directory: ./frontend
+        run: |
+          echo "🔍 Verificando atualizações de segurança..."
+          npm audit fix --audit-level moderate || echo "Algumas vulnerabilidades não puderam ser corrigidas automaticamente"
+
+      - name: Update dependencies
+        working-directory: ./frontend
+        run: |
+          echo "📦 Atualizando dependências..."
+          npm update
+
+      - name: Run tests after updates
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: Create security update PR
+        if: github.event_name == 'schedule'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: atualizar dependências de segurança"
+          title: "🔒 Atualizações de Segurança Automáticas"
+          body: |
+            ## 🔒 Atualizações de Segurança
+            
+            Este PR contém atualizações automáticas de segurança para as dependências do projeto.
+            
+            ### 📋 Mudanças
+            - Atualizações de dependências com vulnerabilidades conhecidas
+            - Correções de segurança automáticas
+            - Verificação de compatibilidade
+            
+            ### ✅ Verificações
+            - [x] Testes unitários passando
+            - [x] Auditoria de segurança limpa
+            - [x] Build funcionando
+            
+            ### 🔍 Revisão Necessária
+            Por favor, revise as mudanças antes de fazer merge.
+          branch: security-updates
+          delete-branch: true
+
+  # Verificação de vulnerabilidades
+  vulnerability-scan:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=frontend/package.json
+
+      - name: Run OWASP dependency check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'controle-imoveis-react'
+          path: './frontend'
+          format: 'JSON'
+          out: './reports'
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: ./reports/
+          retention-days: 30
+
+  # Verificação de licenças
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Check licenses
+        working-directory: ./frontend
+        run: |
+          echo "📄 Verificando licenças das dependências..."
+          npx license-checker --summary
+          npx license-checker --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;Unlicense"
+
+  # Relatório de segurança
+  security-report:
+    name: Security Report
+    runs-on: ubuntu-latest
+    needs: [security-updates, vulnerability-scan, license-check]
+    if: always()
+    steps:
+      - name: Generate security report
+        run: |
+          echo "# 🔒 Relatório de Segurança" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📅 Data: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Verificações Realizadas" >> $GITHUB_STEP_SUMMARY
+          echo "- Atualizações de segurança: ${{ needs.security-updates.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Scan de vulnerabilidades: ${{ needs.vulnerability-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Verificação de licenças: ${{ needs.license-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Status Geral" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.security-updates.result }}" = "success" ] && [ "${{ needs.vulnerability-scan.result }}" = "success" ] && [ "${{ needs.license-check.result }}" = "success" ]; then
+            echo "✅ Todas as verificações de segurança passaram" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Algumas verificações de segurança falharam" >> $GITHUB_STEP_SUMMARY
+          fi

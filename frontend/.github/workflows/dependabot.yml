@@ -1,0 +1,94 @@
+# .github/workflows/dependabot.yml
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  # Verificar se é um PR do Dependabot
+  check-dependabot:
+    name: Check Dependabot PR
+    runs-on: ubuntu-latest
+    outputs:
+      is-dependabot: ${{ steps.check.outputs.is-dependabot }}
+    steps:
+      - name: Check if PR is from Dependabot
+        id: check
+        run: |
+          if [ "${{ github.actor }}" = "dependabot[bot]" ]; then
+            echo "is-dependabot=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-dependabot=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Executar testes para PRs do Dependabot
+  test-dependabot:
+    name: Test Dependabot PR
+    runs-on: ubuntu-latest
+    needs: check-dependabot
+    if: needs.check-dependabot.outputs.is-dependabot == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./frontend
+        run: npm run test:run
+
+      - name: Run lint
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Build application
+        working-directory: ./frontend
+        run: npm run build
+
+  # Auto-merge se os testes passarem
+  auto-merge:
+    name: Auto-merge Dependabot PR
+    runs-on: ubuntu-latest
+    needs: [check-dependabot, test-dependabot]
+    if: needs.check-dependabot.outputs.is-dependabot == 'true' && needs.test-dependabot.result == 'success'
+    steps:
+      - name: Enable auto-merge
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Comentar no PR com status
+  comment-status:
+    name: Comment PR Status
+    runs-on: ubuntu-latest
+    needs: [check-dependabot, test-dependabot]
+    if: always() && needs.check-dependabot.outputs.is-dependabot == 'true'
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ needs.test-dependabot.result }}';
+            const comment = status === 'success' 
+              ? '✅ **Dependabot PR verificado com sucesso!**\n\nTodos os testes passaram e o PR será mesclado automaticamente.'
+              : '❌ **Dependabot PR falhou na verificação.**\n\nPor favor, verifique os logs e corrija os problemas antes de mesclar.';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
