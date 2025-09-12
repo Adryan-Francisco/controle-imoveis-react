@@ -17,10 +17,38 @@ export const imoveisKeys = {
 // Função para buscar imóveis com paginação e filtros
 export async function fetchImoveis({ userId, page = 1, pageSize = 10, filters = {} }) {
   try {
-    const { data, error, count } = await supabase
+    let query = supabase
       .from('ControleImoveisRurais')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('user_id', userId);
+
+    // Aplicar filtros
+    if (filters.search) {
+      const searchTerm = `%${filters.search}%`;
+      query = query.or(`proprietario.ilike.${searchTerm},sitio.ilike.${searchTerm},endereco.ilike.${searchTerm},cpf.ilike.${searchTerm},telefone.ilike.${searchTerm}`);
+    }
+
+    if (filters.status) {
+      query = query.eq('status_pagamento', filters.status);
+    }
+
+    if (filters.dateFrom) {
+      query = query.gte('data_vencimento', filters.dateFrom.toISOString().split('T')[0]);
+    }
+
+    if (filters.dateTo) {
+      query = query.lte('data_vencimento', filters.dateTo.toISOString().split('T')[0]);
+    }
+
+    if (filters.valorMin !== null && filters.valorMin !== undefined) {
+      query = query.gte('valor', filters.valorMin);
+    }
+
+    if (filters.valorMax !== null && filters.valorMax !== undefined) {
+      query = query.lte('valor', filters.valorMax);
+    }
+
+    const { data, error, count } = await query
       .order('id', { ascending: true })
       .range((page - 1) * pageSize, page * pageSize - 1);
     

@@ -9,6 +9,7 @@ import { ImovelForm } from '../components/ImovelForm';
 import { ImovelTable } from '../components/ImovelTable';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { AdvancedFilters } from '../components/AdvancedFilters';
+import { Pagination } from '../components/Pagination';
 
 // Lazy loading para componentes pesados
 const LazyImovelForm = lazy(() => import('../components/ImovelForm').then(module => ({ default: module.ImovelForm })));
@@ -24,6 +25,8 @@ export function ImoveisPage({ isMobile, onBack }) {
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [selectedImovel, setSelectedImovel] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -39,13 +42,16 @@ export function ImoveisPage({ isMobile, onBack }) {
     isSubmitting, 
     createImovel, 
     updateImovel, 
-    deleteImovel 
-  } = useImoveis(user, { page: 1, pageSize: 100 }); // Aumentar pageSize para ver todos os imóveis
+    deleteImovel,
+    totalCount,
+    totalPages
+  } = useImoveis(user, { page: currentPage, pageSize, filters });
 
 
   // Função para lidar com mudanças de filtros
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset para primeira página ao filtrar
   }, []);
 
   // Função para limpar filtros
@@ -58,56 +64,22 @@ export function ImoveisPage({ isMobile, onBack }) {
       valorMin: null,
       valorMax: null
     });
+    setCurrentPage(1); // Reset para primeira página ao limpar filtros
   }, []);
 
-  // Aplicar filtros aos imóveis com memoização
-  const filteredImoveis = useMemo(() => {
-    let filtered = [...imoveis];
-    
-    // Filtro de busca
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(imovel => {
-        const searchableFields = [
-          imovel.proprietario,
-          imovel.sitio,
-          imovel.endereco,
-          imovel.cpf,
-          imovel.telefone
-        ].filter(Boolean).join(' ').toLowerCase();
-        return searchableFields.includes(searchTerm);
-      });
-    }
-    
-    // Filtro de status
-    if (filters.status) {
-      filtered = filtered.filter(imovel => imovel.status_pagamento === filters.status);
-    }
-    
-    // Filtros de data
-    if (filters.dateFrom) {
-      filtered = filtered.filter(imovel => 
-        imovel.data_vencimento && new Date(imovel.data_vencimento) >= filters.dateFrom
-      );
-    }
-    
-    if (filters.dateTo) {
-      filtered = filtered.filter(imovel => 
-        imovel.data_vencimento && new Date(imovel.data_vencimento) <= filters.dateTo
-      );
-    }
-    
-    // Filtros de valor
-    if (filters.valorMin !== null) {
-      filtered = filtered.filter(imovel => (imovel.valor || 0) >= filters.valorMin);
-    }
-    
-    if (filters.valorMax !== null) {
-      filtered = filtered.filter(imovel => (imovel.valor || 0) <= filters.valorMax);
-    }
-    
-    return filtered;
-  }, [imoveis, filters]);
+  // Função para mudar de página
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  // Função para mudar tamanho da página
+  const handlePageSizeChange = useCallback((newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset para primeira página ao mudar tamanho
+  }, []);
+
+  // Os filtros agora são aplicados no backend através do hook useImoveis
+  // Não precisamos mais filtrar localmente
 
   // Contar filtros ativos com memoização
   const activeFiltersCount = useMemo(() => {
@@ -243,13 +215,35 @@ export function ImoveisPage({ isMobile, onBack }) {
         </Center>
       }>
         <LazyImovelTable 
-          imoveis={filteredImoveis}
+          imoveis={imoveis}
           loading={loading}
           onAddClick={openCreateModal}
           onEditClick={openEditModal}
           onDeleteClick={openConfirmDeleteModal}
         />
       </Suspense>
+
+      {/* Componente de Paginação */}
+      {totalPages > 1 && (
+        <Suspense fallback={
+          <Center py="md">
+            <Loader size="sm" />
+          </Center>
+        }>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={[5, 10, 20, 50]}
+            showPageSizeSelector={true}
+            showItemCount={true}
+            compact={isMobile}
+          />
+        </Suspense>
+      )}
     </Container>
   );
 }
