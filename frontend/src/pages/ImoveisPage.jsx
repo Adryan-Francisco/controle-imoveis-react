@@ -9,6 +9,7 @@ import { ImovelForm } from '../components/ImovelForm';
 import { ImovelTable } from '../components/ImovelTable';
 import { DeleteConfirmModal } from '../components/DeleteConfirmModal';
 import { AdvancedFilters } from '../components/AdvancedFilters';
+import { Pagination } from '../components/Pagination';
 
 // Lazy loading para componentes pesados
 const LazyImovelForm = lazy(() => import('../components/ImovelForm').then(module => ({ default: module.ImovelForm })));
@@ -33,14 +34,19 @@ export function ImoveisPage({ isMobile, onBack }) {
     valorMax: null
   });
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const { 
     imoveis, 
     loading, 
     isSubmitting, 
     createImovel, 
     updateImovel, 
-    deleteImovel 
-  } = useImoveis(user, { page: 1, pageSize: 100 }); // Aumentar pageSize para ver todos os imóveis
+    deleteImovel,
+    totalCount,
+    totalPages
+  } = useImoveis(user, { page: currentPage, pageSize });
 
 
   // Função para lidar com mudanças de filtros
@@ -141,6 +147,15 @@ export function ImoveisPage({ isMobile, onBack }) {
       setSelectedImovel(null);
     }
   }, [deleteImovel, selectedImovel, closeDeleteModal]);
+
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  }, []);
 
   const openCreateModal = useCallback(() => { 
     setSelectedImovel(null);
@@ -250,6 +265,18 @@ export function ImoveisPage({ isMobile, onBack }) {
           onDeleteClick={openConfirmDeleteModal}
         />
       </Suspense>
+
+      {/* Paginação */}
+      <Center mt="lg">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalCount}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        />
+      </Center>
     </Container>
   );
 }
