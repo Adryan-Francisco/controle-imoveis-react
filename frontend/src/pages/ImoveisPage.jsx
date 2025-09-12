@@ -26,7 +26,7 @@ export function ImoveisPage({ isMobile, onBack }) {
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [selectedImovel, setSelectedImovel] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(100);
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -237,8 +237,8 @@ export function ImoveisPage({ isMobile, onBack }) {
             pageSize={pageSize}
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
-            pageSizeOptions={[5, 10, 20, 50]}
-            showPageSizeSelector={true}
+            pageSizeOptions={[100]}
+            showPageSizeSelector={false}
             showItemCount={true}
             compact={isMobile}
           />
