@@ -230,7 +230,7 @@ Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalh
 ## 📞 Suporte
 
 Para suporte, entre em contato através de:
-- Email: seu-email@exemplo.com
+- Email: adryanfrancisco62@gmail.com
 - Issues: [GitHub Issues](link-para-issues)
 
 ---
