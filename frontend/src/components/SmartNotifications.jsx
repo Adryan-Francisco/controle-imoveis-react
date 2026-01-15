@@ -23,3 +23,7 @@ export function SmartNotifications({ user }) {
   return null;
 }
 
+
+
+
+

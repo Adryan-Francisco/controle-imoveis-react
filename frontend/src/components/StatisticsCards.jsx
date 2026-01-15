@@ -34,12 +34,12 @@ export const StatisticsCards = memo(function StatisticsCards({ statistics }) {
   ];
 
   return (
-    <Grid gutter="lg" mb="xl">
+    <Grid gutter="md" mb="md">
       {cards.map((card, index) => (
         <Grid.Col key={index} span={{ base: 12, sm: 6, md: 3 }}>
           <Card 
             withBorder 
-            p="lg" 
+            p="md" 
             radius="lg" 
             style={{ 
               background: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,

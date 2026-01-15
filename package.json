@@ -1,0 +1,18 @@
+{
+  "name": "controle-imoveis-react",
+  "version": "1.0.0",
+  "description": "Sistema de controle de imóveis",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "dev:proxy": "cd frontend && npm run dev:proxy",
+    "dev:full": "cd frontend && npm run dev:full",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "test": "cd frontend && npm run test",
+    "test:ui": "cd frontend && npm run test:ui",
+    "test:run": "cd frontend && npm run test:run",
+    "test:e2e": "cd frontend && npm run test:e2e",
+    "test:all": "cd frontend && npm run test:all"
+  }
+}

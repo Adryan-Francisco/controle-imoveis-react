@@ -92,3 +92,7 @@ function generatePageNumbers(currentPage, totalPages) {
   return rangeWithDots;
 }
 
+
+
+
+

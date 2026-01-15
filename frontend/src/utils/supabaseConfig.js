@@ -25,3 +25,7 @@ export function createSupabaseClient() {
   return createClient(supabaseConfig.url, supabaseConfig.anonKey, supabaseConfig.options);
 }
 
+
+
+
+

@@ -7,22 +7,22 @@ export const ChartsSection = memo(function ChartsSection({ statusData }) {
   const theme = useMantineTheme();
 
   return (
-    <Grid gutter="lg" mb="xl">
+    <Grid gutter="md" mb="md">
       <Grid.Col span={12}>
         <Card 
           withBorder 
-          p="lg" 
+          p="md" 
           radius="lg" 
           style={{ 
             background: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
             border: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[3]}`,
-            height: '300px'
+            minHeight: '400px'
           }}
         >
           <Title order={4} mb="md" style={{ color: theme.colors.blue[6] }}>
             Status dos Imóveis
           </Title>
-          <ResponsiveContainer width="100%" height="200px">
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={statusData}

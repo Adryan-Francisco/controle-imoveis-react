@@ -13,6 +13,7 @@ import { ChartsSection } from './components/ChartsSection';
 import { ResponsiveSidebar } from './components/ResponsiveSidebar';
 import { ReportsPage } from './pages/ReportsPage';
 import { ImoveisPage } from './pages/ImoveisPage';
+import { CompaniesPage } from './pages/CompaniesPage';
 
 // --- Importações do Mantine e de Ícones ---
 import {
@@ -31,6 +32,7 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
 
   const [sidebarOpened, { open: openSidebar, close: closeSidebar }] = useDisclosure(false);
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [sidebarMinimized, setSidebarMinimized] = useState(false);
 
   const { imoveis } = useImoveis(user, { page: 1, pageSize: 1000 }); // Carregar todos os dados
 
@@ -50,15 +52,17 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
   return (
     <AppShell
       header={{ height: isMobile ? 60 : 70 }}
-      padding="md"
+      padding="sm"
       styles={(theme) => ({ 
         main: { 
           backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.colors.gray[0],
           backgroundImage: theme.colorScheme === 'dark' 
             ? 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%)'
             : 'radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%)',
-          marginLeft: !isMobile ? '280px' : '0',
-          width: !isMobile ? 'calc(100% - 280px)' : '100%'
+          marginLeft: !isMobile ? (sidebarMinimized ? '80px' : '280px') : '0',
+          width: !isMobile ? (sidebarMinimized ? 'calc(100% - 80px)' : 'calc(100% - 280px)') : '100%',
+          overflow: 'auto',
+          transition: 'all 0.3s ease'
         } 
       })}
     >
@@ -110,15 +114,19 @@ export default function Dashboard({ toggleColorScheme, colorScheme }) {
         isMobile={isMobile}
         currentPage={currentPage}
         onNavigate={handleNavigate}
+        minimized={sidebarMinimized}
+        onMinimizedChange={setSidebarMinimized}
       />
       {currentPage === 'dashboard' ? (
-        <Container size="xl" my="xl">
+        <Container size="100%" my="md" px="sm" fluid>
           {/* Cards de Estatísticas */}
           <StatisticsCards statistics={statistics} />
 
           {/* Gráficos */}
           <ChartsSection statusData={statusData} />
         </Container>
+      ) : currentPage === 'companies' ? (
+        <CompaniesPage />
       ) : currentPage === 'reports' ? (
         <ReportsPage 
           imoveis={imoveis}
