@@ -20,11 +20,11 @@ import {
   Modal as MantineModal,
   TextInput,
   NumberInput,
-  DateInput,
   Select,
   SimpleGrid,
   Loader,
 } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import {
   IconAlertCircle,
   IconCheck,
