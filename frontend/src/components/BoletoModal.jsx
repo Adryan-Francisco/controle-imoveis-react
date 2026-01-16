@@ -155,8 +155,6 @@ export function BoletoModal({ opened, onClose, company, onGenerateBoleto }) {
               onChange={setAmount}
               min={0}
               step={0.01}
-              decimalSeparator=","
-              thousandsSeparator="."
               required
               disabled={loading}
             />

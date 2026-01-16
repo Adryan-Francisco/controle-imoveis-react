@@ -101,8 +101,6 @@ export function CompanyForm({ opened, onClose, onSubmit, initialValues = null })
             placeholder="0.00"
             min={0}
             step={0.01}
-            decimalSeparator=","
-            thousandsSeparator="."
             {...form.getInputProps('monthlyFee')}
             required
           />

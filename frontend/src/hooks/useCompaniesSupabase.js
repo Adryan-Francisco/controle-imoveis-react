@@ -11,7 +11,8 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { addNotification } = useNotifications();
+  const notificationHook = useNotifications();
+  const addNotification = notificationHook?.addNotification || (() => {});
 
   // Carregar empresas ao montar o componente
   useEffect(() => {
@@ -90,7 +91,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
     } finally {
       setLoading(false);
     }
-  }, [userId, addNotification]);
+  }, [userId]);
 
   // Adicionar empresa
   const addCompany = useCallback(
@@ -161,7 +162,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId, addNotification]
+    [userId]
   );
 
   // Atualizar empresa
@@ -231,7 +232,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId, addNotification]
+    [userId]
   );
 
   // Deletar empresa
@@ -270,7 +271,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId, addNotification]
+    [userId]
   );
 
   // Adicionar boleto
@@ -338,7 +339,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId, addNotification]
+    [userId]
   );
 
   // Marcar boleto como pago
@@ -391,7 +392,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId, addNotification]
+    [userId]
   );
 
   const refresh = useCallback(() => {
