@@ -29,6 +29,7 @@ import { CompanyForm } from '../components/CompanyForm';
 import { CompanyTable } from '../components/CompanyTable';
 import { BoletoModal } from '../components/BoletoModal';
 import { BoletoListModal } from '../components/BoletoListModal';
+import { MonthlyFeeControl } from '../components/MonthlyFeeControl';
 import dayjs from 'dayjs';
 
 export function CompaniesPage() {
@@ -44,6 +45,7 @@ export function CompaniesPage() {
   const [formOpened, setFormOpened] = useState(false);
   const [boletoModalOpened, setBoletoModalOpened] = useState(false);
   const [boletoListOpened, setBoletoListOpened] = useState(false);
+  const [monthlyFeeOpened, setMonthlyFeeOpened] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [editingCompany, setEditingCompany] = useState(null);
 
@@ -97,6 +99,41 @@ export function CompaniesPage() {
   const handleDownloadBoleto = (boleto) => {
     // Implementar download de boleto em PDF
     console.log('Baixar boleto:', boleto);
+  };
+
+  const handleOpenMonthlyFeeControl = (company) => {
+    setSelectedCompany(company);
+    setMonthlyFeeOpened(true);
+  };
+
+  const handleAddMonthlyFee = (companyId, feeData) => {
+    if (selectedCompany) {
+      addBoleto(companyId, {
+        amount: feeData.amount,
+        dueDate: feeData.dueDate,
+        month: feeData.month,
+        year: feeData.year,
+        type: 'mensalidade',
+      });
+    }
+  };
+
+  const handleUpdateMonthlyFee = (companyId, feeData) => {
+    // Implementar atualização de mensalidade
+    console.log('Atualizar mensalidade:', companyId, feeData);
+  };
+
+  const handleMarkMonthlyFeeAsPaid = (companyId, month, year) => {
+    if (selectedCompany) {
+      const boletosFromMonth = selectedCompany.boletos?.filter(
+        b => dayjs(b.dueDate).month() + 1 === parseInt(month) &&
+          dayjs(b.dueDate).year() === year
+      );
+      
+      if (boletosFromMonth && boletosFromMonth.length > 0) {
+        markBoletoAsPaid(companyId, boletosFromMonth[0].id);
+      }
+    }
   };
 
   return (
@@ -224,6 +261,7 @@ export function CompaniesPage() {
                 onDelete={deleteCompany}
                 onGenerateBoleto={handleOpenBoletoModal}
                 onViewBoletos={handleOpenBoletoListModal}
+                onViewMonthlyFees={handleOpenMonthlyFeeControl}
               />
             </Tabs.Panel>
 
@@ -234,6 +272,7 @@ export function CompaniesPage() {
                 onDelete={deleteCompany}
                 onGenerateBoleto={handleOpenBoletoModal}
                 onViewBoletos={handleOpenBoletoListModal}
+                onViewMonthlyFees={handleOpenMonthlyFeeControl}
               />
             </Tabs.Panel>
 
@@ -244,6 +283,7 @@ export function CompaniesPage() {
                 onDelete={deleteCompany}
                 onGenerateBoleto={handleOpenBoletoModal}
                 onViewBoletos={handleOpenBoletoListModal}
+                onViewMonthlyFees={handleOpenMonthlyFeeControl}
               />
             </Tabs.Panel>
           </Tabs>
@@ -280,6 +320,18 @@ export function CompaniesPage() {
         company={selectedCompany}
         onMarkAsPaid={handleMarkAsPaid}
         onDownloadBoleto={handleDownloadBoleto}
+      />
+
+      <MonthlyFeeControl
+        company={selectedCompany}
+        isOpened={monthlyFeeOpened}
+        onClose={() => {
+          setMonthlyFeeOpened(false);
+          setSelectedCompany(null);
+        }}
+        onAddFee={handleAddMonthlyFee}
+        onUpdateFee={handleUpdateMonthlyFee}
+        onMarkAsPaid={handleMarkMonthlyFeeAsPaid}
       />
     </Container>
   );

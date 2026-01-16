@@ -14,6 +14,10 @@ const INITIAL_COMPANIES = [
     responsiblePhone: '(11) 98765-4321',
     email: 'joao@imoveis.com.br',
     createdAt: new Date().toISOString(),
+    monthlyFees: {
+      '01': { month: '01', year: 2025, amount: 500.00, dueDate: '2025-01-05', status: 'pago', paidAt: new Date().toISOString() },
+      '02': { month: '02', year: 2025, amount: 500.00, dueDate: '2025-02-05', status: 'pendente' },
+    },
     boletos: [
       {
         id: 101,
@@ -46,6 +50,7 @@ const INITIAL_COMPANIES = [
     responsiblePhone: '(21) 99876-5432',
     email: 'maria@meiconsultoria.com.br',
     createdAt: new Date().toISOString(),
+    monthlyFees: {},
     boletos: [],
   },
 ];
@@ -199,6 +204,81 @@ export const useCompanies = (useInitialData = false) => {
     }
   }, [addNotification]);
 
+  // Adicionar mensalidade
+  const addMonthlyFee = useCallback((companyId, feeData) => {
+    try {
+      setCompanies((prev) =>
+        prev.map((company) =>
+          company.id === companyId
+            ? {
+                ...company,
+                monthlyFees: {
+                  ...(company.monthlyFees || {}),
+                  [feeData.month]: {
+                    month: feeData.month,
+                    year: feeData.year,
+                    amount: feeData.amount,
+                    dueDate: feeData.dueDate,
+                    status: 'pendente',
+                    createdAt: new Date().toISOString(),
+                  },
+                },
+              }
+            : company
+        )
+      );
+
+      addNotification({
+        title: 'Sucesso',
+        message: 'Mensalidade adicionada com sucesso',
+        type: 'success',
+      });
+    } catch (error) {
+      addNotification({
+        title: 'Erro',
+        message: 'Erro ao adicionar mensalidade',
+        type: 'error',
+      });
+      throw error;
+    }
+  }, [addNotification]);
+
+  // Marcar mensalidade como paga
+  const markMonthlyFeeAsPaid = useCallback((companyId, month, year) => {
+    try {
+      setCompanies((prev) =>
+        prev.map((company) =>
+          company.id === companyId
+            ? {
+                ...company,
+                monthlyFees: {
+                  ...(company.monthlyFees || {}),
+                  [month]: {
+                    ...((company.monthlyFees || {})[month] || {}),
+                    status: 'pago',
+                    paidAt: new Date().toISOString(),
+                  },
+                },
+              }
+            : company
+        )
+      );
+
+      addNotification({
+        title: 'Sucesso',
+        message: 'Mensalidade marcada como paga',
+        type: 'success',
+      });
+    } catch (error) {
+      addNotification({
+        title: 'Erro',
+        message: 'Erro ao marcar mensalidade como paga',
+        type: 'error',
+      });
+      throw error;
+    }
+  }, [addNotification]);
+
   return {
     companies,
     loading,
@@ -207,5 +287,7 @@ export const useCompanies = (useInitialData = false) => {
     deleteCompany,
     addBoleto,
     markBoletoAsPaid,
+    addMonthlyFee,
+    markMonthlyFeeAsPaid,
   };
 };

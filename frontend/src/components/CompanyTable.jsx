@@ -17,6 +17,7 @@ import {
   IconFileText,
   IconEye,
   IconDots,
+  IconCalendar,
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 
@@ -26,6 +27,7 @@ export function CompanyTable({
   onDelete,
   onGenerateBoleto,
   onViewBoletos,
+  onViewMonthlyFees,
 }) {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
@@ -124,6 +126,12 @@ export function CompanyTable({
                     </ActionIcon>
                   </Menu.Target>
                   <Menu.Dropdown>
+                    <Menu.Item
+                      leftSection={<IconCalendar size={14} />}
+                      onClick={() => onViewMonthlyFees(company)}
+                    >
+                      Controle Mensal
+                    </Menu.Item>
                     <Menu.Item
                       leftSection={<IconFileText size={14} />}
                       onClick={() => onGenerateBoleto(company)}
