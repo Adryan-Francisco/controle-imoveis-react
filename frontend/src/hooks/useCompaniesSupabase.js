@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { companiesAPI, boletosAPI } from '../utils/companiesAPI';
+import { supabase } from '../supabaseClient';
 import { useNotifications } from './useNotifications';
 
 /**
@@ -25,14 +25,24 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
 
     setLoading(true);
     try {
-      const { data, error } = await companiesAPI.getCompanies(userId);
+      // Buscar empresas do usuário
+      const { data: companiesData, error: companiesError } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('user_id', userId)
+        .is('deleted_at', null);
 
-      if (error) throw error;
+      if (companiesError) throw companiesError;
 
-      // Transformar dados do Supabase para formato da aplicação
+      // Buscar boletos para cada empresa
       const companiesWithBoletos = await Promise.all(
-        (data || []).map(async (company) => {
-          const { data: boletos } = await boletosAPI.getBoletosByCompany(company.id);
+        (companiesData || []).map(async (company) => {
+          const { data: boletos } = await supabase
+            .from('company_boletos')
+            .select('*')
+            .eq('company_id', company.id)
+            .order('due_date', { ascending: false });
+
           return {
             id: company.id,
             name: company.name,
@@ -43,8 +53,14 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
             responsibleName: company.contact_person,
             responsiblePhone: company.contact_phone,
             email: company.contact_email || company.email,
+            address: company.address,
+            city: company.city,
+            state: company.state,
+            zipCode: company.zip_code,
+            isActive: company.is_active,
             createdAt: company.created_at,
             updatedAt: company.updated_at,
+            monthlyFees: {},
             boletos: (boletos || []).map((b) => ({
               id: b.id,
               amount: parseFloat(b.amount),
@@ -53,6 +69,8 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
               status: b.status === 'paid' ? 'pago' : 'pendente',
               createdAt: b.created_at,
               paidAt: b.payment_date,
+              issueDate: b.issue_date,
+              notes: b.notes,
             })),
             lastBoletoDate: boletos?.[0]?.created_at,
           };
@@ -81,22 +99,46 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
 
       setLoading(true);
       try {
-        const { data, error } = await companiesAPI.createCompany(userId, companyData);
+        const { data, error } = await supabase
+          .from('companies')
+          .insert([
+            {
+              user_id: userId,
+              name: companyData.name,
+              cnpj: companyData.cnpj,
+              type: companyData.regimeType === 'mei' ? 'MEI' : 'SIMPLES_NACIONAL',
+              email: companyData.email,
+              phone: companyData.phone,
+              address: companyData.address,
+              city: companyData.city,
+              state: companyData.state,
+              zip_code: companyData.zipCode,
+              contact_person: companyData.responsibleName,
+              contact_email: companyData.responsibleEmail,
+              contact_phone: companyData.responsiblePhone,
+              boleto_day: companyData.dueDay || 5,
+              boleto_amount: companyData.monthlyFee || 0,
+              is_active: true,
+              notes: companyData.notes,
+            },
+          ])
+          .select();
 
         if (error) throw error;
 
         const newCompany = {
-          id: data.id,
-          name: data.name,
-          cnpj: data.cnpj,
-          regimeType: data.type === 'MEI' ? 'mei' : 'simples_nacional',
-          monthlyFee: parseFloat(data.boleto_amount || 0),
-          dueDay: data.boleto_day || 5,
-          responsibleName: data.contact_person,
-          responsiblePhone: data.contact_phone,
-          email: data.contact_email || data.email,
-          createdAt: data.created_at,
+          id: data[0].id,
+          name: data[0].name,
+          cnpj: data[0].cnpj,
+          regimeType: data[0].type === 'MEI' ? 'mei' : 'simples_nacional',
+          monthlyFee: parseFloat(data[0].boleto_amount || 0),
+          dueDay: data[0].boleto_day || 5,
+          responsibleName: data[0].contact_person,
+          responsiblePhone: data[0].contact_phone,
+          email: data[0].contact_email || data[0].email,
+          createdAt: data[0].created_at,
           boletos: [],
+          monthlyFees: {},
         };
 
         setCompanies((prev) => [newCompany, ...prev]);
@@ -124,27 +166,49 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
 
   // Atualizar empresa
   const updateCompany = useCallback(
-    async (id, companyData) => {
+    async (companyId, companyData) => {
+      if (!userId) return;
+
       setLoading(true);
       try {
-        const { error } = await companiesAPI.updateCompany(id, companyData);
+        const { error } = await supabase
+          .from('companies')
+          .update({
+            name: companyData.name,
+            cnpj: companyData.cnpj,
+            type: companyData.regimeType === 'mei' ? 'MEI' : 'SIMPLES_NACIONAL',
+            email: companyData.email,
+            phone: companyData.phone,
+            address: companyData.address,
+            city: companyData.city,
+            state: companyData.state,
+            zip_code: companyData.zipCode,
+            contact_person: companyData.responsibleName,
+            contact_email: companyData.responsibleEmail,
+            contact_phone: companyData.responsiblePhone,
+            boleto_day: companyData.dueDay || 5,
+            boleto_amount: companyData.monthlyFee || 0,
+            notes: companyData.notes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', companyId)
+          .eq('user_id', userId);
 
         if (error) throw error;
 
         setCompanies((prev) =>
           prev.map((company) =>
-            company.id === id
+            company.id === companyId
               ? {
                   ...company,
                   name: companyData.name,
                   cnpj: companyData.cnpj,
-                  regimeType: companyData.regimeType === 'mei' ? 'mei' : 'simples_nacional',
-                  monthlyFee: parseFloat(companyData.monthlyFee),
-                  dueDay: parseInt(companyData.dueDay),
+                  regimeType: companyData.regimeType,
+                  monthlyFee: companyData.monthlyFee,
+                  dueDay: companyData.dueDay,
                   responsibleName: companyData.responsibleName,
                   responsiblePhone: companyData.responsiblePhone,
                   email: companyData.email,
-                  updatedAt: new Date().toISOString(),
                 }
               : company
           )
@@ -167,19 +231,28 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [addNotification]
+    [userId, addNotification]
   );
 
   // Deletar empresa
   const deleteCompany = useCallback(
-    async (id) => {
+    async (companyId) => {
+      if (!userId) return;
+
       setLoading(true);
       try {
-        const { error } = await companiesAPI.deleteCompany(id);
+        const { error } = await supabase
+          .from('companies')
+          .update({
+            deleted_at: new Date().toISOString(),
+          })
+          .eq('id', companyId)
+          .eq('user_id', userId);
 
         if (error) throw error;
 
-        setCompanies((prev) => prev.filter((company) => company.id !== id));
+        setCompanies((prev) => prev.filter((c) => c.id !== companyId));
+
         addNotification({
           title: 'Sucesso',
           message: 'Empresa deletada com sucesso',
@@ -197,36 +270,52 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [addNotification]
+    [userId, addNotification]
   );
 
-  // Gerar boleto
+  // Adicionar boleto
   const addBoleto = useCallback(
     async (companyId, boletoData) => {
+      if (!userId) return;
+
       setLoading(true);
       try {
-        const { data, error } = await boletosAPI.createBoleto(companyId, boletoData);
+        const { data, error } = await supabase
+          .from('company_boletos')
+          .insert([
+            {
+              company_id: companyId,
+              amount: boletoData.amount,
+              due_date: boletoData.dueDate,
+              issue_date: boletoData.issueDate || new Date().toISOString().split('T')[0],
+              status: 'pending',
+              notes: boletoData.notes,
+            },
+          ])
+          .select();
 
         if (error) throw error;
 
         const newBoleto = {
-          id: data.id,
-          amount: parseFloat(data.amount),
-          barcode: data.boleto_number,
-          dueDate: data.due_date,
+          id: data[0].id,
+          amount: parseFloat(data[0].amount),
+          barcode: data[0].boleto_number,
+          dueDate: data[0].due_date,
           status: 'pendente',
-          createdAt: data.created_at,
+          createdAt: data[0].created_at,
+          issueDate: data[0].issue_date,
+          notes: data[0].notes,
         };
 
         setCompanies((prev) =>
-          prev.map((company) =>
-            company.id === companyId
+          prev.map((c) =>
+            c.id === companyId
               ? {
-                  ...company,
-                  boletos: [...(company.boletos || []), newBoleto],
+                  ...c,
+                  boletos: [newBoleto, ...c.boletos],
                   lastBoletoDate: new Date().toISOString(),
                 }
-              : company
+              : c
           )
         );
 
@@ -238,7 +327,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
 
         return newBoleto;
       } catch (err) {
-        console.error('Erro ao gerar boleto:', err);
+        console.error('Erro ao adicionar boleto:', err);
         addNotification({
           title: 'Erro',
           message: 'Erro ao gerar boleto',
@@ -249,30 +338,39 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [addNotification]
+    [userId, addNotification]
   );
 
   // Marcar boleto como pago
   const markBoletoAsPaid = useCallback(
     async (companyId, boletoId) => {
+      if (!userId) return;
+
       setLoading(true);
       try {
-        const { error } = await boletosAPI.markBoletoAsPaid(boletoId);
+        const { error } = await supabase
+          .from('company_boletos')
+          .update({
+            status: 'paid',
+            payment_date: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', boletoId);
 
         if (error) throw error;
 
         setCompanies((prev) =>
-          prev.map((company) =>
-            company.id === companyId
+          prev.map((c) =>
+            c.id === companyId
               ? {
-                  ...company,
-                  boletos: (company.boletos || []).map((boleto) =>
-                    boleto.id === boletoId
-                      ? { ...boleto, status: 'pago', paidAt: new Date().toISOString() }
-                      : boleto
+                  ...c,
+                  boletos: c.boletos.map((b) =>
+                    b.id === boletoId
+                      ? { ...b, status: 'pago', paidAt: new Date().toISOString() }
+                      : b
                   ),
                 }
-              : company
+              : c
           )
         );
 
@@ -293,15 +391,12 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [addNotification]
+    [userId, addNotification]
   );
 
-  // Recarregar dados
   const refresh = useCallback(() => {
-    if (!useLocalData && userId) {
-      loadCompanies();
-    }
-  }, [userId, useLocalData, loadCompanies]);
+    loadCompanies();
+  }, [loadCompanies]);
 
   return {
     companies,
