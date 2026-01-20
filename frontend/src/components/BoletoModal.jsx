@@ -15,6 +15,7 @@ import {
 import { IconAlertCircle, IconFileText, IconCheck } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { coraAPI } from '../utils/coraAPI';
+import { logger } from '../utils/logger';
 
 export function BoletoModal({ opened, onClose, company, onGenerateBoleto }) {
   const [amount, setAmount] = useState(company?.monthlyFee || 0);
@@ -73,7 +74,7 @@ export function BoletoModal({ opened, onClose, company, onGenerateBoleto }) {
       });
     } catch (err) {
       setError(err.message);
-      console.error('Erro ao gerar boleto:', err);
+      logger.error('Erro ao gerar boleto', err);
     } finally {
       setLoading(false);
     }

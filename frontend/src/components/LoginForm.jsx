@@ -19,6 +19,7 @@ import { IconMail, IconLock, IconAlertCircle } from '@tabler/icons-react';
 import { useAuth } from '../AuthProvider';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { validateLoginData, VALIDATION_RULES } from '../utils';
+import { logger } from '../utils/logger';
 
 export function LoginForm() {
   const theme = useMantineTheme();
@@ -57,7 +58,7 @@ export function LoginForm() {
     try {
       await signIn(formData.email, formData.password);
     } catch (err) {
-      console.error('Erro no login:', err);
+      logger.error('Erro no login', err);
     }
   };
 
@@ -198,7 +199,7 @@ export function LoginForm() {
               Não tem uma conta?{' '}
               <Anchor
                 size="sm"
-                onClick={() => console.log('Registrar')}
+                onClick={() => logger.info('Tentativa de registro - em contato com admin')}
                 style={{ cursor: 'pointer' }}
               >
                 Entre em contato com o administrador

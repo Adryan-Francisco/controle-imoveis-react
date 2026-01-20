@@ -31,6 +31,7 @@ import {
   validarCPF,
   abrirBoletoMEINavegador,
 } from '../utils/meiBoletosReceita';
+import { logger } from '../utils/logger';
 
 export function MEIBoletoModal({ opened, onClose, empresa }) {
   const [cnpj, setCNPJ] = useState('');
@@ -75,7 +76,7 @@ export function MEIBoletoModal({ opened, onClose, empresa }) {
       setBoleto(boletoGerado);
     } catch (error) {
       setErro(error.message || 'Erro ao gerar boleto');
-      console.error(error);
+      logger.error('Erro ao gerar boleto MEI', error);
     } finally {
       setLoading(false);
     }

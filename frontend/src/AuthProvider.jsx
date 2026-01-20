@@ -5,6 +5,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabaseClient';
 import { useSupabaseError } from './hooks/useSupabaseError';
 import { notifications } from '@mantine/notifications';
+import { logger } from './utils/logger';
 
 const AuthContext = createContext();
 
@@ -20,13 +21,13 @@ export function AuthProvider({ children }) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.error('Erro ao obter sessão:', error);
+          logger.error('Erro ao obter sessão', error);
           handleSupabaseError(error, 'getSession');
         }
         
         // Se não há sessão, criar uma sessão mock com o usuário que tem dados
         if (!session) {
-          console.log('🔐 Nenhuma sessão encontrada, criando sessão mock...');
+          logger.info('Nenhuma sessão encontrada, criando sessão mock');
           // Usar o ID do usuário que tem dados no Supabase
           const mockUser = {
             id: '9408ba75-d201-4bb6-8707-1d43537ba663',
@@ -38,14 +39,14 @@ export function AuthProvider({ children }) {
             access_token: 'mock-token',
             refresh_token: 'mock-refresh-token'
           };
-          console.log('✅ Sessão mock criada:', mockUser.id);
+          logger.info('Sessão mock criada', { userId: mockUser.id });
           setSession(mockSession);
         } else {
-          console.log('✅ Sessão encontrada:', session.user?.id);
+          logger.info('Sessão encontrada', { userId: session.user?.id });
           setSession(session);
         }
       } catch (err) {
-        console.error('Erro inesperado ao obter sessão:', err);
+        logger.error('Erro inesperado ao obter sessão', err);
         setError(err);
       } finally {
         setLoading(false);
@@ -57,7 +58,7 @@ export function AuthProvider({ children }) {
     // Ouve mudanças no estado de autenticação (login, logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔐 Auth state changed:', event, session?.user?.id);
+        logger.info('Auth state changed', { event, userId: session?.user?.id });
         setSession(session);
         setLoading(false);
         

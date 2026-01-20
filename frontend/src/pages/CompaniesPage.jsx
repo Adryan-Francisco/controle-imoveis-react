@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { logger } from '../utils/logger';
 import {
   Container,
   Button,
@@ -100,7 +101,7 @@ export function CompaniesPage() {
 
   const handleDownloadBoleto = (boleto) => {
     // Implementar download de boleto em PDF
-    console.log('Baixar boleto:', boleto);
+    logger.info('Baixar boleto', { boletoId: boleto?.id });
   };
 
   const handleOpenMonthlyFeeControl = (company) => {
@@ -122,7 +123,7 @@ export function CompaniesPage() {
 
   const handleUpdateMonthlyFee = (companyId, feeData) => {
     // Implementar atualização de mensalidade
-    console.log('Atualizar mensalidade:', companyId, feeData);
+    logger.info('Atualizar mensalidade', { companyId, feeData });
   };
 
   const handleMarkMonthlyFeeAsPaid = (companyId, month, year) => {

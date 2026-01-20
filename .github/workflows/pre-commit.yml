@@ -1,0 +1,48 @@
+name: Pre-commit Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate-commits:
+    name: Validate PR Commits
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Validate commit messages
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          validateSingleCommit: false
+      
+      - name: Check for console.log in changes
+        run: |
+          # Verificar se há console.log nos arquivos modificados
+          if git diff origin/main HEAD -- '*.jsx' '*.js' | grep -E '^\+.*console\.(log|warn|error|debug)\(' | grep -v '//' | grep -v 'logger'; then
+            echo "❌ Encontrados console.log() nos commits"
+            echo "Use 'import { logger } from @/utils/logger' em vez disso"
+            exit 1
+          fi
+          echo "✅ Nenhum console.log() encontrado"
+      
+      - name: Check for debugger statements
+        run: |
+          if git diff origin/main HEAD -- '*.jsx' '*.js' | grep -E '^\+.*debugger'; then
+            echo "❌ Encontrados debugger statements nos commits"
+            exit 1
+          fi
+          echo "✅ Nenhum debugger encontrado"
+      
+      - name: Check for TODO comments
+        run: |
+          TODO_COUNT=$(git diff origin/main HEAD -- '*.jsx' '*.js' | grep -E '^\+.*(TODO|FIXME|HACK|XXX)' | wc -l)
+          if [ "$TODO_COUNT" -gt 0 ]; then
+            echo "⚠️  Encontrados $TODO_COUNT comentários TODO/FIXME"
+            echo "Considere resolver antes de fazer merge"
+          fi

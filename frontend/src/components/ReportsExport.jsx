@@ -19,6 +19,7 @@ import {
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
+import { logger } from '../utils/logger';
 import { 
   IconFileExport, 
   IconChartBar, 
@@ -137,7 +138,7 @@ export function ReportsExport({ imoveis, isMobile = false }) {
       }, 500);
       
     } catch (error) {
-      console.error('Erro ao exportar:', error);
+      logger.error('Erro ao exportar', error);
       setExporting(false);
       setExportProgress(0);
     }
