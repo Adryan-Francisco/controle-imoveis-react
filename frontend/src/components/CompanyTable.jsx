@@ -59,7 +59,7 @@ export function CompanyTable({
 
   return (
     <>
-      <Table striped highlightOnHover responsive>
+      <Table striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Empresa</Table.Th>

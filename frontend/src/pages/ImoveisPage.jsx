@@ -1,9 +1,10 @@
 // src/pages/ImoveisPage.jsx
 import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Container, Title, Text, Button, Group, Breadcrumbs, Anchor, useMantineTheme, Loader, Center } from '@mantine/core';
-import { IconArrowLeft, IconHome, IconList } from '@tabler/icons-react';
+import { Container, Title, Text, Button, Group, Breadcrumbs, Anchor, useMantineTheme, Loader, Center, Select, Stack } from '@mantine/core';
+import { IconArrowLeft, IconHome, IconList, IconCalendar } from '@tabler/icons-react';
 import { useAuth } from '../AuthProvider';
 import { useImoveis } from '../hooks/useImoveis';
+import { useDuplicateCheck } from '../hooks/useDuplicateCheck';
 import { useDisclosure } from '@mantine/hooks';
 import { ImovelForm } from '../components/ImovelForm';
 import { ImovelTable } from '../components/ImovelTable';
@@ -20,13 +21,21 @@ const LazyAdvancedFilters = lazy(() => import('../components/AdvancedFilters').t
 export function ImoveisPage({ isMobile, onBack }) {
   const theme = useMantineTheme();
   const { user } = useAuth();
+  const { checkDuplicate } = useDuplicateCheck();
   
+  // Gerar lista de anos (últimos 5 anos + próximos 10 anos)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 15 }, (_, i) => {
+    const year = currentYear - 5 + i;
+    return { value: year.toString(), label: year.toString() };
+  });
 
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [selectedImovel, setSelectedImovel] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(100);
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [filters, setFilters] = useState({
     search: '',
     status: '',
@@ -46,6 +55,16 @@ export function ImoveisPage({ isMobile, onBack }) {
     totalCount,
     totalPages
   } = useImoveis(user, { page: currentPage, pageSize, filters });
+
+  // Filtrar imoveis por ano selecionado
+  const imoveisFiltered = useMemo(() => {
+    return imoveis.filter(imovel => {
+      if (!imovel.data_pagamento && !imovel.created_at) return true;
+      const dateStr = imovel.data_pagamento || imovel.created_at;
+      const year = new Date(dateStr).getFullYear().toString();
+      return year === selectedYear;
+    });
+  }, [imoveis, selectedYear]);
 
 
   // Função para lidar com mudanças de filtros
@@ -92,19 +111,32 @@ export function ImoveisPage({ isMobile, onBack }) {
     const isEditing = !!values.id;
     
     if (isEditing) {
-      const { id, user_id, ...dataToUpdate } = values;
+      const { id, user_id: _userId, ...dataToUpdate } = values;
       const result = await updateImovel(id, dataToUpdate);
       if (result.success) {
         closeModal();
       }
     } else {
-      const { id, ...dataToInsert } = values;
-      const result = await createImovel(dataToInsert);
-      if (result.success) {
-        closeModal();
+      // Verificar se já existe um imóvel duplicado
+      const { exists, existingId } = await checkDuplicate(values, user?.id);
+      
+      if (exists) {
+        // Se encontrar duplicado, fazer update ao invés de create
+        const { user_id: _userId, ...dataToUpdate } = values;
+        const result = await updateImovel(existingId, dataToUpdate);
+        if (result.success) {
+          closeModal();
+        }
+      } else {
+        // Se não encontrar, criar novo
+        const { id: _id, ...dataToInsert } = values;
+        const result = await createImovel(dataToInsert);
+        if (result.success) {
+          closeModal();
+        }
       }
     }
-  }, [updateImovel, createImovel, closeModal]);
+  }, [updateImovel, createImovel, closeModal, checkDuplicate, user?.id]);
 
   const handleDelete = useCallback(async () => {
     const result = await deleteImovel(selectedImovel.id);
@@ -133,8 +165,8 @@ export function ImoveisPage({ isMobile, onBack }) {
   const breadcrumbItems = useMemo(() => [
     { title: 'Dashboard', href: '#' },
     { title: 'Imóveis', href: '#' },
-  ].map((item, index) => (
-    <Anchor href={item.href} key={index} onClick={(event) => { event.preventDefault(); onBack(); }}>
+  ].map((item) => (
+    <Anchor href={item.href} key={`breadcrumb-imovel-${item.title}`} onClick={(event) => { event.preventDefault(); onBack(); }}>
       {item.title}
     </Anchor>
   )), [onBack]);
@@ -159,9 +191,45 @@ export function ImoveisPage({ isMobile, onBack }) {
       
       <Breadcrumbs mb="lg">{breadcrumbItems}</Breadcrumbs>
 
-      <Text size="lg" mb="xl">
-        Gerencie todos os seus imóveis rurais. Adicione, edite ou remova registros conforme necessário.
-      </Text>
+      <Stack gap="md">
+        <Text size="lg">
+          Gerencie todos os seus imóveis rurais. Adicione, edite ou remova registros conforme necessário.
+        </Text>
+
+        {/* Seletor de Ano */}
+        <Group gap="sm">
+          <Select
+            placeholder="Selecionar ano"
+            data={yearOptions}
+            value={selectedYear}
+            onChange={(value) => {
+              setSelectedYear(value);
+              setCurrentPage(1);
+            }}
+            searchable
+            clearable={false}
+            maxDropdownHeight={200}
+            w={isMobile ? 120 : 150}
+            icon={<IconCalendar size={16} />}
+            label="Filtrar por Ano"
+            styles={{
+              input: {
+                backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[6] : theme.colors.gray[0],
+                borderColor: theme.colors.blue[4],
+                color: theme.colorScheme === 'dark' ? theme.white : theme.black,
+              },
+              // Use Mantine defaults for option styling
+              dropdown: {
+                backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
+                borderColor: theme.colors.blue[4],
+              },
+            }}
+          />
+          <Text size="sm" c="dimmed">
+            Mostrando {imoveisFiltered.length} de {imoveis.length} registros
+          </Text>
+        </Group>
+      </Stack>
 
       {/* Filtros Avançados */}
       <Suspense fallback={
@@ -215,7 +283,7 @@ export function ImoveisPage({ isMobile, onBack }) {
         </Center>
       }>
         <LazyImovelTable 
-          imoveis={imoveis}
+          imoveis={imoveisFiltered}
           loading={loading}
           onAddClick={openCreateModal}
           onEditClick={openEditModal}
@@ -237,7 +305,7 @@ export function ImoveisPage({ isMobile, onBack }) {
             pageSize={pageSize}
             onPageChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
-            pageSizeOptions={[5, 10, 20, 50]}
+            pageSizeOptions={[10, 20, 50, 100]}
             showPageSizeSelector={true}
             showItemCount={true}
             compact={isMobile}

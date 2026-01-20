@@ -1,4 +1,5 @@
 // src/AuthProvider.jsx
+/* eslint-disable react-refresh/only-export-components */
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from './supabaseClient';

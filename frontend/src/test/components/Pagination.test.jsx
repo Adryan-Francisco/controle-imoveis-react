@@ -1,6 +1,6 @@
 // src/test/components/Pagination.test.jsx
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '../utils/test-utils';
 import { Pagination } from '../../components/Pagination';
 

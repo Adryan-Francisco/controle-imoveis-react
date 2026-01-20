@@ -14,8 +14,9 @@ import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { LoginForm } from './components/LoginForm';
 import Dashboard from './Dashboard';
+import './styles/visual-improvements.css';
 
-// Tema personalizado mais moderno com melhor acessibilidade
+// Tema personalizado mais moderno com melhor acessibilidade e gradients
 const theme = createTheme({
   primaryColor: 'blue',
   primaryShade: { light: 6, dark: 4 },
@@ -31,6 +32,30 @@ const theme = createTheme({
       '#0369a1',
       '#075985',
       '#0c4a6e',
+    ],
+    emerald: [
+      '#f0fdf4',
+      '#dcfce7',
+      '#bbf7d0',
+      '#86efac',
+      '#4ade80',
+      '#22c55e',
+      '#16a34a',
+      '#15803d',
+      '#166534',
+      '#0f3815',
+    ],
+    violet: [
+      '#f5f3ff',
+      '#ede9fe',
+      '#ddd6fe',
+      '#c4b5fd',
+      '#a78bfa',
+      '#8b5cf6',
+      '#7c3aed',
+      '#6d28d9',
+      '#5b21b6',
+      '#3f0f5c',
     ],
   },
   fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',

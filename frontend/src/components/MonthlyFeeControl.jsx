@@ -39,11 +39,10 @@ const MONTHS = [
   { value: '12', label: 'Dezembro' },
 ];
 
-export function MonthlyFeeControl({ company, isOpened, onClose, onAddFee, onUpdateFee, onMarkAsPaid }) {
+export function MonthlyFeeControl({ company, isOpened, onClose, onAddFee, onMarkAsPaid }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [feeAmount, setFeeAmount] = useState(company?.monthlyFee || 0);
   const [dueDate, setDueDate] = useState(null);
-  const [isAddingFee, setIsAddingFee] = useState(false);
 
   if (!company) return null;
 
@@ -77,7 +76,6 @@ export function MonthlyFeeControl({ company, isOpened, onClose, onAddFee, onUpda
       setSelectedMonth(null);
       setFeeAmount(company.monthlyFee);
       setDueDate(null);
-      setIsAddingFee(false);
     }
   };
 
@@ -118,9 +116,6 @@ export function MonthlyFeeControl({ company, isOpened, onClose, onAddFee, onUpda
               onChange={setDueDate}
             />
             <Group justify="flex-end">
-              <Button variant="default" onClick={() => setIsAddingFee(false)}>
-                Cancelar
-              </Button>
               <Button
                 onClick={handleAddFee}
                 disabled={!selectedMonth || !feeAmount || !dueDate}

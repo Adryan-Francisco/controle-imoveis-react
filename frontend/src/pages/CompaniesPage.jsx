@@ -34,13 +34,15 @@ import dayjs from 'dayjs';
 
 export function CompaniesPage() {
   const { user } = useAuth();
-  
-  // Usar Supabase se usuário está autenticado, senão usar dados locais
   const useLocalData = !user?.id;
+  
+  // Always call hooks at top level - not conditionally
+  const localCompaniesData = useCompanies(true);
+  const supabaseCompaniesData = useCompaniesSupabase(user?.id, false);
+  
+  // Select which one to use based on condition
   const { companies, loading, addCompany, updateCompany, deleteCompany, addBoleto, markBoletoAsPaid, refresh } =
-    useLocalData 
-      ? useCompanies(true) 
-      : useCompaniesSupabase(user?.id, false);
+    useLocalData ? localCompaniesData : supabaseCompaniesData;
 
   const [formOpened, setFormOpened] = useState(false);
   const [boletoModalOpened, setBoletoModalOpened] = useState(false);

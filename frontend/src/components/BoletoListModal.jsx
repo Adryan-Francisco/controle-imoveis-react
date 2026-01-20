@@ -45,8 +45,7 @@ export function BoletoListModal({
   opened,
   onClose,
   company,
-  onMarkAsPaid,
-  onDownloadBoleto,
+  onMarkAsPaid
 }) {
   const theme = useMantineTheme();
   const { gerarBoleto, loading, baixarBoletoPDF } = useBoleto();
@@ -229,7 +228,7 @@ export function BoletoListModal({
             background: theme.colorScheme === 'dark' ? theme.colors.dark[8] : theme.white,
             overflow: 'auto'
           }}>
-            <Table striped highlightOnHover responsive size="sm">
+            <Table striped highlightOnHover size="sm">
               <Table.Thead style={{
                 background: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.colors.gray[0]
               }}>

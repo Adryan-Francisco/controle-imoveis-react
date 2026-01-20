@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 
 export const useAppStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       // UI State
       sidebarOpen: true,
       theme: 'light',

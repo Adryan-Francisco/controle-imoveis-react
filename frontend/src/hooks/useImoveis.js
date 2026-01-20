@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import { useImoveisQuery, useCreateImovel, useUpdateImovel, useDeleteImovel } from './useImoveisQuery';
 import { useSecurityValidation } from './useSecurityValidation';
 import { useErrorHandler } from './useErrorHandler';
-import { validateImovelData, formatCurrency } from '../utils';
 
 export function useImoveis(user, options = {}) {
   const { page = 1, pageSize = 10, filters = {} } = options;

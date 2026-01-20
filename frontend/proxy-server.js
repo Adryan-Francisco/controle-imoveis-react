@@ -20,11 +20,11 @@ app.use('/supabase', createProxyMiddleware({
   pathRewrite: {
     '^/supabase': ''
   },
-  onProxyReq: (proxyReq, req, res) => {
+  onProxyReq: (proxyReq) => {
     // Adicionar headers necessários
     proxyReq.setHeader('Origin', 'https://ylfmefcvwkaxqrmugwjm.supabase.co');
   },
-  onProxyRes: (proxyRes, req, res) => {
+  onProxyRes: (proxyRes) => {
     // Adicionar headers CORS
     proxyRes.headers['Access-Control-Allow-Origin'] = '*';
     proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';

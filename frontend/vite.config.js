@@ -40,15 +40,59 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'supabase-cache',
+              networkTimeoutSeconds: 3,
               expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              },
+              cacheableResponse: {
+                statuses: [200]  // Only cache 200 responses
+              },
+              plugins: [
+                {
+                  requestWillFetch: async ({ request }) => {
+                    // Don't cache requests that might return partial responses
+                    if (request.headers.get('range')) {
+                      return undefined; // Skip caching for range requests
+                    }
+                    return request;
+                  },
+                  cacheWillUpdate: async ({ response }) => {
+                    // Don't cache partial responses, errors, or missing responses
+                    if (!response || response.status >= 400 || response.status === 206) {
+                      return null;
+                    }
+                    // Don't cache if Content-Range header is present (already cached partial)
+                    if (response.headers.get('content-range')) {
+                      return null;
+                    }
+                    return response;
+                  },
+                  fetchDidFail: async () => {
+                    // Don't cache failed requests
+                    return null;
+                  }
+                }
+              ]
+            }
+          },
+          // Cache para assets estáticos (JS, CSS, imagens)
+          {
+            urlPattern: /^https:\/\/.*\.(js|css|png|jpg|jpeg|svg|gif|woff|woff2|eot|ttf|otf)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'assets-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
               },
               cacheableResponse: {
                 statuses: [0, 200]

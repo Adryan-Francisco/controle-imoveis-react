@@ -1,6 +1,6 @@
 // src/components/LoadingSpinner.jsx
 import React from 'react';
-import { Center, Loader, Text, Stack, useMantineTheme } from '@mantine/core';
+import { Center, Loader, Text, Stack } from '@mantine/core';
 
 export function LoadingSpinner({ 
   size = 'lg', 
@@ -8,7 +8,6 @@ export function LoadingSpinner({
   color = 'blue',
   fullHeight = false 
 }) {
-  const theme = useMantineTheme();
 
   const content = (
     <Stack align="center" spacing="md">

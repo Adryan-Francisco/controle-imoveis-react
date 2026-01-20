@@ -1,14 +1,10 @@
 // src/hooks/useNotifications.js
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { notifications } from '@mantine/notifications';
-import { useImoveisStatistics } from './useImoveisQuery';
 
-export function useNotifications(userId) {
+export function useNotifications() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [lastNotificationCheck, setLastNotificationCheck] = useState(null);
-  
-  // Buscar estatísticas para notificações
-  const { data: statistics } = useImoveisStatistics(userId);
 
   // Verificar vencimentos próximos
   const checkUpcomingPayments = useCallback((imoveis) => {

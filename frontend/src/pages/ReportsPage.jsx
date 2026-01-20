@@ -10,8 +10,8 @@ export function ReportsPage({ imoveis, statistics, isMobile, onBack }) {
   const items = [
     { title: 'Dashboard', href: '#' },
     { title: 'Relatórios', href: '#' },
-  ].map((item, index) => (
-    <Anchor href={item.href} key={index} onClick={(event) => { event.preventDefault(); onBack(); }}>
+  ].map((item) => (
+    <Anchor href={item.href} key={`breadcrumb-report-${item.title}`} onClick={(event) => { event.preventDefault(); onBack(); }}>
       {item.title}
     </Anchor>
   ));

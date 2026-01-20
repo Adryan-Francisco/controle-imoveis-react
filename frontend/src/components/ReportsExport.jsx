@@ -10,7 +10,6 @@ import {
   Text,
   Progress,
   Alert,
-  useMantineTheme,
   Grid,
   NumberInput,
   TextInput,
@@ -33,10 +32,9 @@ import {
   IconFileSpreadsheet,
   IconWorld
 } from '@tabler/icons-react';
-import { exportToPDF, exportToExcel, exportToCSV, exportToHTML, exportCustomReport } from '../utils/exportUtils';
+import { exportToPDF, exportToExcel, exportToCSV, exportToHTML } from '../utils/exportUtils';
 
-export function ReportsExport({ imoveis, statistics, isMobile = false }) {
-  const theme = useMantineTheme();
+export function ReportsExport({ imoveis, isMobile = false }) {
   const [opened, { open, close }] = useDisclosure(false);
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);

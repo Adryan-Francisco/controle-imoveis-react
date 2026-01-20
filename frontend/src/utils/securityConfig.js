@@ -44,12 +44,13 @@ export function validateInput(input, type = 'string') {
       }
       break;
       
-    case 'email':
+    case 'email': {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(input)) {
         return { valid: false, error: 'Email inválido' };
       }
       break;
+    }
       
     case 'password':
       if (input.length < config.MIN_PASSWORD_LENGTH) {
@@ -69,7 +70,7 @@ export function sanitizeHTML(html) {
   
   // Remove tags não permitidas
   const allowedTags = config.ALLOWED_TAGS.join('|');
-  const regex = new RegExp(`<(?!\/?(?:${allowedTags})\\b)[^>]*>`, 'gi');
+  const regex = new RegExp(`<(?!/?(?:${allowedTags})\\b)[^>]*>`, 'gi');
   
   return html
     .replace(regex, '')

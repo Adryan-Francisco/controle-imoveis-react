@@ -33,6 +33,7 @@ export function useOfflineSync(userId) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Salvar dados offline

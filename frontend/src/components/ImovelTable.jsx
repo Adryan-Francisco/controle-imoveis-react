@@ -16,7 +16,7 @@ export const ImovelTable = memo(function ImovelTable({
   onDeleteClick 
 }) {
   const theme = useMantineTheme();
-  const { generateId, announce } = useAccessibility();
+  const { generateId } = useAccessibility();
   const tableId = generateId('imoveis-table');
 
   const statusColors = { PAGO: 'green', PENDENTE: 'orange', ATRASADO: 'red' };

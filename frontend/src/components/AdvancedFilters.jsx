@@ -1,5 +1,5 @@
 // src/components/AdvancedFilters.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Paper,
   Group,
@@ -13,7 +13,6 @@ import {
   ActionIcon,
   Grid,
   NumberInput,
-  useMantineTheme,
   Divider,
   Box
 } from '@mantine/core';
@@ -35,10 +34,8 @@ export function AdvancedFilters({
   onFilterChange,
   onClearFilters,
   activeFiltersCount = 0,
-  isCollapsed = false,
-  onToggleCollapse
+  isCollapsed = false
 }) {
-  const theme = useMantineTheme();
   const [opened, { toggle }] = useDisclosure(!isCollapsed);
 
   // Garantir que filters tenha valores padrão

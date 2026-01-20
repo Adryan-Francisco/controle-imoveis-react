@@ -34,7 +34,7 @@ export const ChartsSection = memo(function ChartsSection({ statusData }) {
                 dataKey="value"
               >
                 {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${entry.name || index}`} fill={entry.color} />
                 ))}
               </Pie>
               <RechartsTooltip />
@@ -42,7 +42,7 @@ export const ChartsSection = memo(function ChartsSection({ statusData }) {
           </ResponsiveContainer>
           <Group justify="center" mt="md">
             {statusData.map((item, index) => (
-              <Group key={index} gap="xs">
+              <Group key={`status-${item.name || index}`} gap="xs">
                 <Box 
                   style={{ 
                     width: 12, 

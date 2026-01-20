@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from './useNotifications';
 
@@ -12,14 +12,10 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const notificationHook = useNotifications();
-  const addNotification = notificationHook?.addNotification || (() => {});
-
-  // Carregar empresas ao montar o componente
-  useEffect(() => {
-    if (!useLocalData && userId) {
-      loadCompanies();
-    }
-  }, [userId, useLocalData]);
+  const addNotification = useMemo(
+    () => notificationHook?.addNotification || (() => {}),
+    [notificationHook?.addNotification]
+  );
 
   const loadCompanies = useCallback(async () => {
     if (!userId) return;
@@ -91,7 +87,14 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, addNotification]);
+
+  // Carregar empresas ao montar o componente
+  useEffect(() => {
+    if (!useLocalData && userId) {
+      loadCompanies();
+    }
+  }, [userId, useLocalData, loadCompanies]);
 
   // Adicionar empresa
   const addCompany = useCallback(
@@ -162,7 +165,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId]
+    [userId, addNotification]
   );
 
   // Atualizar empresa
@@ -232,7 +235,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId]
+    [userId, addNotification]
   );
 
   // Deletar empresa
@@ -271,7 +274,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId]
+    [userId, addNotification]
   );
 
   // Adicionar boleto
@@ -339,7 +342,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId]
+    [userId, addNotification]
   );
 
   // Marcar boleto como pago
@@ -392,7 +395,7 @@ export const useCompaniesSupabase = (userId, useLocalData = false) => {
         setLoading(false);
       }
     },
-    [userId]
+    [userId, addNotification]
   );
 
   const refresh = useCallback(() => {

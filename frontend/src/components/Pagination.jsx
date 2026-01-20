@@ -6,7 +6,6 @@ import {
   Text,
   Select,
   Stack,
-  useMantineTheme,
   Center,
   Box
 } from '@mantine/core';
@@ -29,7 +28,6 @@ export function Pagination({
   showItemCount = true,
   compact = false
 }) {
-  const theme = useMantineTheme();
   
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -48,22 +46,25 @@ export function Pagination({
     return null;
   }
   
-  const renderPageButton = (page, label, icon, disabled = false) => (
-    <Button
-      key={page}
-      variant={page === currentPage ? 'filled' : 'light'}
-      size="sm"
-      onClick={() => handlePageChange(page)}
-      disabled={disabled}
-      leftSection={icon}
-      style={{
-        minWidth: compact ? '32px' : 'auto',
-        height: compact ? '32px' : 'auto',
-      }}
-    >
-      {!compact && label}
-    </Button>
-  );
+  const renderPageButton = (page, label, icon, disabled = false, purpose = 'page') => {
+    const uniqueKey = `btn-${purpose}-${page}`;
+    return (
+      <Button
+        key={uniqueKey}
+        variant={page === currentPage ? 'filled' : 'light'}
+        size="sm"
+        onClick={() => handlePageChange(page)}
+        disabled={disabled}
+        leftSection={icon}
+        style={{
+          minWidth: compact ? '32px' : 'auto',
+          height: compact ? '32px' : 'auto',
+        }}
+      >
+        {!compact && label}
+      </Button>
+    );
+  };
   
   const renderPageNumbers = () => {
     const pages = [];
@@ -71,10 +72,10 @@ export function Pagination({
     
     // Primeira página
     if (currentPage > delta + 1) {
-      pages.push(renderPageButton(1, '1'));
+      pages.push(renderPageButton(1, '1', null, false, 'first-num'));
       if (currentPage > delta + 2) {
         pages.push(
-          <Text key="ellipsis1" size="sm" c="dimmed" px="xs">
+          <Text key={`ellipsis-start-${currentPage}-${totalPages}`} size="sm" c="dimmed" px="xs">
             ...
           </Text>
         );
@@ -87,19 +88,19 @@ export function Pagination({
       i <= Math.min(totalPages, currentPage + delta);
       i++
     ) {
-      pages.push(renderPageButton(i, i.toString()));
+      pages.push(renderPageButton(i, i.toString(), null, false, 'num'));
     }
     
     // Última página
     if (currentPage < totalPages - delta) {
       if (currentPage < totalPages - delta - 1) {
         pages.push(
-          <Text key="ellipsis2" size="sm" c="dimmed" px="xs">
+          <Text key={`ellipsis-end-${currentPage}-${totalPages}`} size="sm" c="dimmed" px="xs">
             ...
           </Text>
         );
       }
-      pages.push(renderPageButton(totalPages, totalPages.toString()));
+      pages.push(renderPageButton(totalPages, totalPages.toString(), null, false, 'last-num'));
     }
     
     return pages;
@@ -138,14 +139,15 @@ export function Pagination({
         <Center mt="md">
           <Group gap="xs">
             {/* Primeira página */}
-            {renderPageButton(1, 'Primeira', <IconChevronsLeft size={16} />, currentPage === 1)}
+            {renderPageButton(1, 'Primeira', <IconChevronsLeft size={16} />, currentPage === 1, 'first')}
             
             {/* Página anterior */}
             {renderPageButton(
               currentPage - 1,
               'Anterior',
               <IconChevronLeft size={16} />,
-              currentPage === 1
+              currentPage === 1,
+              'prev'
             )}
             
             {/* Números das páginas */}
@@ -156,7 +158,8 @@ export function Pagination({
               currentPage + 1,
               'Próxima',
               <IconChevronRight size={16} />,
-              currentPage === totalPages
+              currentPage === totalPages,
+              'next'
             )}
             
             {/* Última página */}
@@ -164,7 +167,8 @@ export function Pagination({
               totalPages,
               'Última',
               <IconChevronsRight size={16} />,
-              currentPage === totalPages
+              currentPage === totalPages,
+              'last'
             )}
           </Group>
         </Center>

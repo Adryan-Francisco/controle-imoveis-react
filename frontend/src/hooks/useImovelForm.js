@@ -1,11 +1,9 @@
 // src/hooks/useImovelForm.js
 import { useForm } from '@mantine/form';
 import { useCallback } from 'react';
-import { useFormValidation } from './useFormValidation';
 import { validateRequired, validateMinLength, validateNumber, validateCPF, validatePhone } from '../utils/validators';
 
 export function useImovelForm(initialValues = {}) {
-  const { validateForm, getError } = useFormValidation();
   
   // Garantir que initialValues não seja null ou undefined
   const safeInitialValues = initialValues || {};

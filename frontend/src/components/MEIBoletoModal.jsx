@@ -27,12 +27,10 @@ import {
   IconExternalLink,
 } from '@tabler/icons-react';
 import {
-  gerarBoletoMEI,
   buscarBoletoMEI,
   validarCPF,
   abrirBoletoMEINavegador,
 } from '../utils/meiBoletosReceita';
-import { gerarPDFBoletoMEI } from '../utils/boletosPDF';
 
 export function MEIBoletoModal({ opened, onClose, empresa }) {
   const [cnpj, setCNPJ] = useState('');
@@ -90,23 +88,6 @@ export function MEIBoletoModal({ opened, onClose, empresa }) {
       const anoAtual = new Date().getFullYear();
       abrirBoletoMEINavegador(cpfDoMei, parseInt(mes), anoAtual);
     }
-  };
-
-  const handleGerarPDF = () => {
-    try {
-      if (boleto) {
-        gerarPDFBoletoMEI(boleto);
-      }
-    } catch (error) {
-      setErro('Erro ao gerar PDF: ' + error.message);
-      console.error(error);
-    }
-  };
-
-  const handleFecharBoleto = () => {
-    setBoleto(null);
-    setErro(null);
-    onClose();
   };
 
   const meses = Array.from({ length: 12 }, (_, i) => ({

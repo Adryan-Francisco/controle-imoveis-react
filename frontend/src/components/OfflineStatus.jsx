@@ -32,10 +32,6 @@ export function OfflineStatus({
   const { announce, generateId } = useAccessibility();
   const statusId = generateId('offline-status');
 
-  if (isOnline && pendingChanges === 0) {
-    return null; // Não mostrar quando tudo está sincronizado
-  }
-
   // Anunciar mudanças de status
   React.useEffect(() => {
     if (isOnline && pendingChanges > 0) {
@@ -44,6 +40,10 @@ export function OfflineStatus({
       announce('Modo offline ativado. Alterações serão sincronizadas quando a conexão for restaurada.');
     }
   }, [isOnline, pendingChanges, announce]);
+
+  if (isOnline && pendingChanges === 0) {
+    return null; // Não mostrar quando tudo está sincronizado
+  }
 
   if (compact) {
     return (

@@ -105,3 +105,58 @@ export const SUCCESS_MESSAGES = {
   PASSWORD_RESET: 'Email de recuperação enviado!',
   PASSWORD_UPDATED: 'Senha atualizada com sucesso!'
 };
+export const REGIME_TYPES = {
+  SIMPLES_NACIONAL: 'simples_nacional',
+  LUCRO_PRESUMIDO: 'lucro_presumido',
+  LUCRO_REAL: 'lucro_real',
+  MEI: 'mei',
+};
+
+export const REGIME_LABELS = {
+  simples_nacional: 'Simples Nacional',
+  lucro_presumido: 'Lucro Presumido',
+  lucro_real: 'Lucro Real',
+  mei: 'MEI',
+};
+
+export const BOLETO_STATUS = {
+  PAGO: 'pago',
+  PENDENTE: 'pendente',
+  VENCIDO: 'vencido',
+  CANCELADO: 'cancelado',
+};
+
+export const BOLETO_STATUS_LABELS = {
+  pago: 'Pago',
+  pendente: 'Pendente',
+  vencido: 'Vencido',
+  cancelado: 'Cancelado',
+};
+
+export const BOLETO_STATUS_COLORS = {
+  pago: 'green',
+  pendente: 'yellow',
+  vencido: 'red',
+  cancelado: 'gray',
+};
+
+// Performance & Caching
+export const CACHE_DURATION = {
+  FAST: 5 * 60 * 1000,      // 5 minutos
+  NORMAL: 15 * 60 * 1000,   // 15 minutos
+  LONG: 60 * 60 * 1000,     // 1 hora
+};
+
+// Debounce timeouts
+export const DEBOUNCE_DELAYS = {
+  SEARCH: 300,
+  AUTO_SAVE: 1000,
+  RESIZE: 200,
+};
+
+// Pagination defaults
+export const PAGINATION_DEFAULTS = {
+  PAGE_SIZE: 10,
+  PAGE_SIZE_OPTIONS: [5, 10, 20, 50],
+  DEFAULT_PAGE: 1,
+};

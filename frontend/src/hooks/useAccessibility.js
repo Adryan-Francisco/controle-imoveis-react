@@ -1,10 +1,10 @@
 // src/hooks/useAccessibility.js
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export function useAccessibility() {
   const [isKeyboardUser, setIsKeyboardUser] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
-  const announcementRef = useRef(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   // Detectar se o usuário está usando teclado
   useEffect(() => {
@@ -143,51 +143,41 @@ export function useAccessibility() {
   }, []);
 
   // Navegação por teclado para listas
-  const useListNavigation = useCallback((items, onSelect) => {
-    const [focusedIndex, setFocusedIndex] = useState(-1);
-
-    const handleKeyDown = useCallback((e) => {
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setFocusedIndex(prev => 
-            prev < items.length - 1 ? prev + 1 : 0
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setFocusedIndex(prev => 
-            prev > 0 ? prev - 1 : items.length - 1
-          );
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          if (focusedIndex >= 0 && items[focusedIndex]) {
-            onSelect(items[focusedIndex], focusedIndex);
-          }
-          break;
-        case 'Home':
-          e.preventDefault();
-          setFocusedIndex(0);
-          break;
-        case 'End':
-          e.preventDefault();
-          setFocusedIndex(items.length - 1);
-          break;
-        case 'Escape':
-          e.preventDefault();
-          setFocusedIndex(-1);
-          break;
-      }
-    }, [items, focusedIndex, onSelect]);
-
-    return {
-      focusedIndex,
-      setFocusedIndex,
-      handleKeyDown
-    };
-  }, []);
+  const handleListKeyDown = useCallback((e, items, onSelect) => {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setFocusedIndex(prev => 
+          prev < items.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setFocusedIndex(prev => 
+          prev > 0 ? prev - 1 : items.length - 1
+        );
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (focusedIndex >= 0 && items[focusedIndex]) {
+          onSelect(items[focusedIndex], focusedIndex);
+        }
+        break;
+      case 'Home':
+        e.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case 'End':
+        e.preventDefault();
+        setFocusedIndex(items.length - 1);
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setFocusedIndex(-1);
+        break;
+    }
+  }, [focusedIndex]);
 
   // Verificar contraste de cores
   const checkContrast = useCallback((foreground, background) => {
@@ -224,7 +214,9 @@ export function useAccessibility() {
     trapFocus,
     generateId,
     isElementVisible,
-    useListNavigation,
+    handleListKeyDown,
+    focusedIndex,
+    setFocusedIndex,
     checkContrast,
     announcements
   };

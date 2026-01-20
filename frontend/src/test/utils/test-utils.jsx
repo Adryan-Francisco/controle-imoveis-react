@@ -1,4 +1,5 @@
 // src/test/utils/test-utils.jsx
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react';
 import { render } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';

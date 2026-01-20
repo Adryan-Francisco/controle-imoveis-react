@@ -1,6 +1,6 @@
 // src/hooks/useSecurityValidation.js
 import { useCallback } from 'react';
-import { validateCPF, validatePhone, validateEmail } from '../utils/validators';
+import { validateCPF, validatePhone } from '../utils/validators';
 
 export function useSecurityValidation() {
   // Sanitizar dados de entrada
@@ -83,13 +83,12 @@ export function useSecurityValidation() {
   }, [sanitizeInput]);
 
   // Validar permissões do usuário
-  const validateUserPermissions = useCallback((user, action) => {
+  const validateUserPermissions = useCallback((user) => {
     if (!user || !user.id) {
       return { allowed: false, error: 'Usuário não autenticado' };
     }
     
     // Aqui você pode implementar lógica de permissões mais complexa
-    // Por exemplo, verificar se o usuário tem permissão para a ação específica
     
     return { allowed: true };
   }, []);

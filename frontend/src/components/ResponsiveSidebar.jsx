@@ -37,10 +37,17 @@ export function ResponsiveSidebar({
   isMobile,
   currentPage,
   onNavigate,
-  minimized,
-  onMinimizedChange
+  collapsed = false,
+  onCollapsedChange
 }) {
   const theme = useMantineTheme();
+  const [localCollapsed, setLocalCollapsed] = useState(collapsed);
+
+  const handleToggleCollapse = () => {
+    const newState = !localCollapsed;
+    setLocalCollapsed(newState);
+    onCollapsedChange && onCollapsedChange(newState);
+  };
 
   const headerContent = (
     <Group justify="space-between" w="100%">
@@ -66,51 +73,55 @@ export function ResponsiveSidebar({
 
   const navigationSection = (
     <Stack gap="sm">
-      <Tooltip label="Dashboard" position="right" disabled={!minimized}>
+      <Tooltip label="Dashboard" disabled={!localCollapsed} position="right">
         <Button
           variant={currentPage === 'dashboard' ? 'filled' : 'light'}
           leftSection={<IconHome size={16} />}
           onClick={() => onNavigate && onNavigate('dashboard')}
           fullWidth
-          justify={minimized ? 'center' : 'flex-start'}
+          justify={localCollapsed ? 'center' : 'flex-start'}
+          style={{ overflow: 'hidden' }}
         >
-          {!minimized && 'Dashboard'}
+          {!localCollapsed && 'Dashboard'}
         </Button>
       </Tooltip>
       
-      <Tooltip label="Imóveis" position="right" disabled={!minimized}>
+      <Tooltip label="Imóveis" disabled={!localCollapsed} position="right">
         <Button
           variant={currentPage === 'imoveis' ? 'filled' : 'light'}
           leftSection={<IconList size={16} />}
           onClick={() => onNavigate && onNavigate('imoveis')}
           fullWidth
-          justify={minimized ? 'center' : 'flex-start'}
+          justify={localCollapsed ? 'center' : 'flex-start'}
+          style={{ overflow: 'hidden' }}
         >
-          {!minimized && 'Imóveis'}
+          {!localCollapsed && 'Imóveis'}
         </Button>
       </Tooltip>
 
-      <Tooltip label="Empresas" position="right" disabled={!minimized}>
+      <Tooltip label="Empresas" disabled={!localCollapsed} position="right">
         <Button
           variant={currentPage === 'companies' ? 'filled' : 'light'}
           leftSection={<IconBuilding size={16} />}
           onClick={() => onNavigate && onNavigate('companies')}
           fullWidth
-          justify={minimized ? 'center' : 'flex-start'}
+          justify={localCollapsed ? 'center' : 'flex-start'}
+          style={{ overflow: 'hidden' }}
         >
-          {!minimized && 'Empresas'}
+          {!localCollapsed && 'Empresas'}
         </Button>
       </Tooltip>
       
-      <Tooltip label="Relatórios" position="right" disabled={!minimized}>
+      <Tooltip label="Relatórios" disabled={!localCollapsed} position="right">
         <Button
           variant={currentPage === 'reports' ? 'filled' : 'light'}
           leftSection={<IconChartBar size={16} />}
           onClick={() => onNavigate && onNavigate('reports')}
           fullWidth
-          justify={minimized ? 'center' : 'flex-start'}
+          justify={localCollapsed ? 'center' : 'flex-start'}
+          style={{ overflow: 'hidden' }}
         >
-          {!minimized && 'Relatórios'}
+          {!localCollapsed && 'Relatórios'}
         </Button>
       </Tooltip>
     </Stack>
@@ -179,7 +190,7 @@ export function ResponsiveSidebar({
 
   return (
     <Paper 
-      w={minimized ? 80 : 280} 
+      w={localCollapsed ? 80 : 280} 
       p="md" 
       h="100vh"
       style={{
@@ -189,87 +200,44 @@ export function ResponsiveSidebar({
         zIndex: 100,
         background: theme.colorScheme === 'dark' ? theme.colors.dark[7] : theme.white,
         borderRight: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`,
-        transition: 'all 0.3s ease',
-        overflow: 'hidden'
+        transition: 'width 0.3s ease',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
-      <Stack gap="md" h="100%" justify="space-between">
-        <Stack gap="md">
-          <Group justify="space-between" align="center">
-            {!minimized && (
-              <Group>
-                <IconHome size={28} color={theme.colors.blue[6]} />
-                <Title order={2} style={{ color: theme.colors.blue[6], whiteSpace: 'nowrap' }}>
-                  Imóveis
-                </Title>
-              </Group>
-            )}
-            <Tooltip label={minimized ? 'Expandir' : 'Minimizar'} position="right">
-              <ActionIcon 
-                onClick={() => onMinimizedChange(!minimized)}
-                variant="light"
-                size="lg"
-                radius="md"
-              >
-                {minimized ? <IconChevronRight size="1.2rem" /> : <IconChevronLeft size="1.2rem" />}
-              </ActionIcon>
-            </Tooltip>
+      <Group justify="space-between" align="center" w="100%" mb="md" wrap="nowrap">
+        {!localCollapsed && (
+          <Group>
+            <IconHome size={28} color={theme.colors.blue[6]} />
+            <Title order={2} style={{ color: theme.colors.blue[6], whiteSpace: 'nowrap' }}>
+              Controle
+            </Title>
           </Group>
-          {navigationSection}
-        </Stack>
-        
-        <Stack gap="sm">
-          <Divider />
-          {!minimized && (
-            <Text size="sm" c="dimmed" style={{ fontWeight: 500 }}>
-              Olá, {user?.email}
-            </Text>
-          )}
-          
-          <Group gap="sm" justify={minimized ? 'center' : 'flex-start'}>
-            <Tooltip label={colorScheme === 'dark' ? 'Modo claro' : 'Modo escuro'} position="right">
-              <ActionIcon 
-                onClick={toggleColorScheme} 
-                size="lg" 
-                variant="light" 
-                radius="md"
-                style={{ 
-                  background: theme.colorScheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[1],
-                  border: `1px solid ${theme.colorScheme === 'dark' ? theme.colors.dark[4] : theme.colors.gray[3]}`
-                }}
-              >
-                {colorScheme === 'dark' ? <IconSun size="1.2rem" /> : <IconMoonStars size="1.2rem" />}
-              </ActionIcon>
-            </Tooltip>
-            
-            {!minimized && (
-              <Button 
-                onClick={signOut} 
-                variant="light" 
-                color="red" 
-                leftSection={<IconLogout size={16} />}
-                radius="md"
-                size="sm"
-                fullWidth
-              >
-                Sair
-              </Button>
-            )}
-            {minimized && (
-              <Tooltip label="Sair" position="right">
-                <ActionIcon 
-                  onClick={signOut}
-                  variant="light"
-                  color="red"
-                  size="lg"
-                  radius="md"
-                >
-                  <IconLogout size="1.2rem" />
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </Group>
-        </Stack>
+        )}
+        {localCollapsed && (
+          <Box style={{ flex: 1 }} />
+        )}
+        <Tooltip label={localCollapsed ? "Expandir" : "Retrair"} position="right" withArrow>
+          <ActionIcon 
+            onClick={handleToggleCollapse}
+            variant="light"
+            size="lg"
+            radius="md"
+            color="blue"
+            style={{ flexShrink: 0 }}
+          >
+            {localCollapsed ? <IconChevronRight size={20} /> : <IconChevronLeft size={20} />}
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+
+      <Stack gap="md" style={{ flex: 1 }}>
+        {navigationSection}
+      </Stack>
+
+      <Stack gap="sm">
+        <Divider />
       </Stack>
     </Paper>
   );

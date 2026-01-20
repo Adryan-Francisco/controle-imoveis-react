@@ -17,7 +17,7 @@ const EXPORT_CONFIG = {
 };
 
 // Formatar dados para exportação
-export function formatDataForExport(data, type = 'all') {
+export function formatDataForExport(data) {
   return data.map(item => ({
     'ID': item.id,
     'Proprietário': item.proprietario || '',
@@ -162,14 +162,13 @@ export function exportCustomReport(data, options = {}) {
     format = 'pdf',
     title = 'Relatório Personalizado',
     filename = 'relatorio-personalizado',
-    filters = {},
-    includeStatistics = true
+    filters = {}
   } = options;
   
   // Aplicar filtros se fornecidos
   let filteredData = data;
   if (Object.keys(filters).length > 0) {
-    filteredData = applyFilters(data, filters);
+    filteredData = applyFilters(data);
   }
   
   const timestamp = new Date().toISOString().split('T')[0];
@@ -195,12 +194,10 @@ export function exportCustomReport(data, options = {}) {
 }
 
 // Aplicar filtros aos dados
-function applyFilters(data, filters) {
-  return data.filter(item => {
-    // Implementar lógica de filtros aqui
-    // Por enquanto, retorna todos os dados
-    return true;
-  });
+function applyFilters(data) {
+  // Implementar lógica de filtros aqui
+  // Por enquanto, retorna todos os dados
+  return data;
 }
 
 // Gerar nome de arquivo com timestamp

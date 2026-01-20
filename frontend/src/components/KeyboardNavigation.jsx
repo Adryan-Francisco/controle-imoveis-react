@@ -1,10 +1,8 @@
 // src/components/KeyboardNavigation.jsx
 import React, { useEffect, useRef } from 'react';
-import { useAccessibility } from '../hooks/useAccessibility';
 
 export function KeyboardNavigation({ children, onEscape, onEnter, onArrowUp, onArrowDown }) {
   const containerRef = useRef(null);
-  const { trapFocus } = useAccessibility();
 
   useEffect(() => {
     const container = containerRef.current;

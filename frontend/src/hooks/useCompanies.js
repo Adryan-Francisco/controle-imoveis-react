@@ -1,77 +1,30 @@
 import { useState, useCallback } from 'react';
 import { useNotifications } from './useNotifications';
-
-// Dados de exemplo iniciais
-const INITIAL_COMPANIES = [
-  {
-    id: 1,
-    name: 'Imóveis Brasil Ltda',
-    cnpj: '12.345.678/0001-90',
-    regimeType: 'simples_nacional',
-    monthlyFee: 500.00,
-    dueDay: 5,
-    responsibleName: 'João Silva',
-    responsiblePhone: '(11) 98765-4321',
-    email: 'joao@imoveis.com.br',
-    createdAt: new Date().toISOString(),
-    monthlyFees: {
-      '01': { month: '01', year: 2025, amount: 500.00, dueDate: '2025-01-05', status: 'pago', paidAt: new Date().toISOString() },
-      '02': { month: '02', year: 2025, amount: 500.00, dueDate: '2025-02-05', status: 'pendente' },
-    },
-    boletos: [
-      {
-        id: 101,
-        amount: 500.00,
-        barcode: '1234567890123456789012345',
-        dueDate: '2025-01-05',
-        status: 'pago',
-        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        paidAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 102,
-        amount: 500.00,
-        barcode: '2345678901234567890123456',
-        dueDate: '2025-02-05',
-        status: 'pendente',
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    lastBoletoDate: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    name: 'MEI Consultoria',
-    cnpj: '98.765.432/0001-12',
-    regimeType: 'mei',
-    monthlyFee: 300.00,
-    dueDay: 10,
-    responsibleName: 'Maria Santos',
-    responsiblePhone: '(21) 99876-5432',
-    email: 'maria@meiconsultoria.com.br',
-    createdAt: new Date().toISOString(),
-    monthlyFees: {},
-    boletos: [],
-  },
-];
+import { INITIAL_COMPANIES, createCompany, createBoleto } from '../utils/companyFactory';
+import { logger } from '../utils/logger';
 
 export const useCompanies = (useInitialData = false) => {
   const [companies, setCompanies] = useState(() => 
     useInitialData ? INITIAL_COMPANIES : []
   );
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const { addNotification } = useNotifications();
 
   // Adicionar empresa
   const addCompany = useCallback((companyData) => {
     try {
-      const newCompany = {
-        id: Date.now(),
+      if (!companyData.name || !companyData.cnpj) {
+        throw new Error('Nome e CNPJ são obrigatórios');
+      }
+
+      const newCompany = createCompany({
         ...companyData,
-        createdAt: new Date().toISOString(),
-        boletos: [],
-      };
+        monthlyFees: companyData.monthlyFees || {},
+      });
+
       setCompanies((prev) => [newCompany, ...prev]);
+      logger.info(`Empresa criada: ${companyData.name}`, { id: newCompany.id });
+
       addNotification({
         title: 'Sucesso',
         message: `${companyData.name} cadastrada com sucesso`,
@@ -79,9 +32,10 @@ export const useCompanies = (useInitialData = false) => {
       });
       return newCompany;
     } catch (error) {
+      logger.error(`Erro ao cadastrar empresa: ${error.message}`, error);
       addNotification({
         title: 'Erro',
-        message: 'Erro ao cadastrar empresa',
+        message: error.message || 'Erro ao cadastrar empresa',
         type: 'error',
       });
       throw error;
@@ -91,6 +45,10 @@ export const useCompanies = (useInitialData = false) => {
   // Atualizar empresa
   const updateCompany = useCallback((id, companyData) => {
     try {
+      if (!id) {
+        throw new Error('ID da empresa é obrigatório');
+      }
+
       setCompanies((prev) =>
         prev.map((company) =>
           company.id === id
@@ -98,15 +56,19 @@ export const useCompanies = (useInitialData = false) => {
             : company
         )
       );
+
+      logger.info(`Empresa atualizada: ${id}`, { data: companyData });
+
       addNotification({
         title: 'Sucesso',
         message: 'Empresa atualizada com sucesso',
         type: 'success',
       });
     } catch (error) {
+      logger.error(`Erro ao atualizar empresa ${id}: ${error.message}`, error);
       addNotification({
         title: 'Erro',
-        message: 'Erro ao atualizar empresa',
+        message: error.message || 'Erro ao atualizar empresa',
         type: 'error',
       });
       throw error;
@@ -116,31 +78,40 @@ export const useCompanies = (useInitialData = false) => {
   // Deletar empresa
   const deleteCompany = useCallback((id) => {
     try {
+      if (!id) {
+        throw new Error('ID da empresa é obrigatório');
+      }
+
+      const company = companies.find((c) => c.id === id);
+      
       setCompanies((prev) => prev.filter((company) => company.id !== id));
+      
+      logger.info(`Empresa deletada: ${id} - ${company?.name}`);
+
       addNotification({
         title: 'Sucesso',
         message: 'Empresa deletada com sucesso',
         type: 'success',
       });
     } catch (error) {
+      logger.error(`Erro ao deletar empresa ${id}: ${error.message}`, error);
       addNotification({
         title: 'Erro',
-        message: 'Erro ao deletar empresa',
+        message: error.message || 'Erro ao deletar empresa',
         type: 'error',
       });
       throw error;
     }
-  }, [addNotification]);
+  }, [companies, addNotification]);
 
   // Gerar boleto
   const addBoleto = useCallback((companyId, boletoData) => {
     try {
-      const newBoleto = {
-        id: Date.now(),
-        ...boletoData,
-        status: 'pendente',
-        createdAt: new Date().toISOString(),
-      };
+      if (!companyId || !boletoData.amount || !boletoData.barcode) {
+        throw new Error('ID da empresa, valor e código de barras são obrigatórios');
+      }
+
+      const newBoleto = createBoleto(companyId, boletoData);
 
       setCompanies((prev) =>
         prev.map((company) =>
@@ -154,6 +125,11 @@ export const useCompanies = (useInitialData = false) => {
         )
       );
 
+      logger.info(`Boleto criado para empresa ${companyId}`, { 
+        boletoId: newBoleto.id, 
+        amount: boletoData.amount 
+      });
+
       addNotification({
         title: 'Sucesso',
         message: 'Boleto gerado com sucesso',
@@ -162,9 +138,10 @@ export const useCompanies = (useInitialData = false) => {
 
       return newBoleto;
     } catch (error) {
+      logger.error(`Erro ao gerar boleto: ${error.message}`, error);
       addNotification({
         title: 'Erro',
-        message: 'Erro ao gerar boleto',
+        message: error.message || 'Erro ao gerar boleto',
         type: 'error',
       });
       throw error;
@@ -244,7 +221,7 @@ export const useCompanies = (useInitialData = false) => {
   }, [addNotification]);
 
   // Marcar mensalidade como paga
-  const markMonthlyFeeAsPaid = useCallback((companyId, month, year) => {
+  const markMonthlyFeeAsPaid = useCallback((companyId, month) => {
     try {
       setCompanies((prev) =>
         prev.map((company) =>

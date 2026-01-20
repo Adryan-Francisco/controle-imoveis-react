@@ -5,8 +5,7 @@ import {
   ActionIcon,
   Group,
   Text,
-  Box,
-  useMantineTheme
+  Box
 } from '@mantine/core';
 import {
   IconSearch,
@@ -28,7 +27,6 @@ export function SearchBar({
   isSearching = false,
   ...props
 }) {
-  const theme = useMantineTheme();
 
   return (
     <Box>

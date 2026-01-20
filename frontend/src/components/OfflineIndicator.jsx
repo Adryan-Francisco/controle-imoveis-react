@@ -1,10 +1,9 @@
 // src/components/OfflineIndicator.jsx
 import React from 'react';
-import { Alert, Text, useMantineTheme } from '@mantine/core';
+import { Alert, Text } from '@mantine/core';
 import { IconWifi } from '@tabler/icons-react';
 
 export function OfflineIndicator({ isOnline }) {
-  const theme = useMantineTheme();
 
   if (isOnline) return null;
 
